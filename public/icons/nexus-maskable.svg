@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Nexus Chat maskable icon</title>
+  <defs>
+    <radialGradient id="a" cx="30%" cy="24%" r="82%">
+      <stop stop-color="#fff8e7"/>
+      <stop offset="0.52" stop-color="#d8ab58"/>
+      <stop offset="1" stop-color="#15120f"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="#f8f1df"/>
+  <circle cx="256" cy="256" r="214" fill="url(#a)"/>
+  <circle cx="256" cy="256" r="156" fill="rgba(255,255,255,.18)" stroke="#fff7e5" stroke-width="14"/>
+  <path fill="#111" d="M145 346V166h48l119 112V166h51v180h-45L196 229v117z"/>
+</svg>

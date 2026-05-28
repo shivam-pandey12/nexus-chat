@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Nexus Chat</title>
+  <defs>
+    <linearGradient id="bg" x1="88" y1="52" x2="424" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff8e7"/>
+      <stop offset="0.52" stop-color="#d5a64b"/>
+      <stop offset="1" stop-color="#8ecaff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#6b4a19" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="132" fill="#f8f1df"/>
+  <circle cx="256" cy="256" r="170" fill="url(#bg)" filter="url(#shadow)"/>
+  <circle cx="256" cy="256" r="139" fill="none" stroke="#fffaf0" stroke-width="14" opacity="0.72"/>
+  <path fill="#16130f" d="M158 338V174h43l108 103V174h45v164h-40L203 232v106z"/>
+</svg>

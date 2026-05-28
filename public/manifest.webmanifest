@@ -1,0 +1,44 @@
+{
+  "name": "Nexus Chat",
+  "short_name": "Nexus",
+  "description": "Instant public, private, and community chat rooms for real people under MH Horizon.",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
+  "background_color": "#f8f1df",
+  "theme_color": "#c9953d",
+  "categories": ["social", "productivity", "education"],
+  "icons": [
+    {
+      "src": "/icons/nexus-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/nexus-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explore Rooms",
+      "short_name": "Explore",
+      "description": "Find public Nexus Chat rooms.",
+      "url": "/explore?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/nexus-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "My Rooms",
+      "short_name": "Rooms",
+      "description": "Open saved rooms.",
+      "url": "/my-rooms?source=pwa-shortcut",
+      "icons": [{ "src": "/icons/nexus-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}
