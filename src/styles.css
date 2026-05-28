@@ -13157,3 +13157,164 @@ button.theme-toggle {
     width: auto !important;
   }
 }
+
+/* Quizora-aligned header control sizing: compact login/profile cluster and action-mode theme icon. */
+.topbar {
+  font-size: 0.94rem !important;
+}
+
+.topbar__quick-actions {
+  align-items: center !important;
+  gap: 0.82rem !important;
+}
+
+.topbar .theme-toggle.icon-button,
+.theme-toggle.icon-button,
+button.theme-toggle {
+  background: hsl(var(--surface-hsl) / 0.78) !important;
+  border: 1px solid hsl(var(--border-hsl) / 0.78) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+  height: 3.65rem !important;
+  min-height: 3.65rem !important;
+  min-width: 3.65rem !important;
+  width: 3.65rem !important;
+}
+
+.topbar .theme-toggle .ui-icon,
+.topbar .theme-toggle svg,
+.theme-toggle .ui-icon,
+.theme-toggle svg {
+  height: 1.22rem !important;
+  margin: 0 !important;
+  width: 1.22rem !important;
+}
+
+.topbar .theme-toggle:hover,
+.topbar .theme-toggle:focus-visible {
+  background: hsl(var(--surface-strong-hsl) / 0.88) !important;
+  border-color: hsl(var(--accent-hsl) / 0.34) !important;
+  transform: translateY(-1px) !important;
+}
+
+.topbar__quick-actions > .account-button.account-button--login {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+  gap: 0 !important;
+  min-height: 3.2rem !important;
+  padding: 0 0.2rem !important;
+}
+
+.topbar__quick-actions > .account-button.account-button--login::before,
+.topbar__quick-actions > .account-button.account-button--login .account-button__icon,
+.topbar__quick-actions > .account-button.account-button--login .account-button__copy em {
+  display: none !important;
+}
+
+.topbar__quick-actions > .account-button.account-button--login .account-button__copy {
+  display: block !important;
+  text-align: left !important;
+}
+
+.topbar__quick-actions > .account-button.account-button--login .account-button__copy strong {
+  color: var(--text) !important;
+  font-size: 1rem !important;
+  font-weight: 740 !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  max-width: none !important;
+}
+
+.topbar-profile-cluster {
+  background: hsl(var(--surface-hsl) / 0.78) !important;
+  border: 1px solid hsl(var(--border-hsl) / 0.78) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  min-height: 3.65rem !important;
+}
+
+.topbar-profile-cluster .topbar-profile {
+  align-items: center !important;
+  gap: 0.72rem !important;
+  min-height: 3.55rem !important;
+  padding: 0.34rem 1.1rem 0.34rem 0.46rem !important;
+}
+
+.topbar-profile-cluster .account-avatar,
+.topbar-profile-cluster .avatar,
+.topbar-profile-cluster .profile-avatar {
+  height: 2.62rem !important;
+  width: 2.62rem !important;
+}
+
+.topbar-profile-cluster .account-button__copy {
+  display: block !important;
+  min-width: 0;
+}
+
+.topbar-profile-cluster .account-button__copy strong {
+  color: var(--text) !important;
+  font-size: 1rem !important;
+  font-weight: 740 !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  max-width: 8rem !important;
+}
+
+.topbar-profile-cluster .account-button__copy em {
+  display: none !important;
+}
+
+.topbar-logout {
+  border-left: 1px solid hsl(var(--border-hsl) / 0.78) !important;
+  min-height: 3.55rem !important;
+  min-width: 3.35rem !important;
+  width: 3.35rem !important;
+}
+
+.topbar-logout .ui-icon,
+.topbar-logout svg {
+  height: 1.16rem !important;
+  width: 1.16rem !important;
+}
+
+@media (max-width: 760px) {
+  .topbar__quick-actions {
+    gap: 0.48rem !important;
+  }
+
+  .topbar .theme-toggle.icon-button,
+  .theme-toggle.icon-button,
+  button.theme-toggle {
+    height: 3rem !important;
+    min-height: 3rem !important;
+    min-width: 3rem !important;
+    width: 3rem !important;
+  }
+
+  .topbar__quick-actions > .account-button.account-button--login .account-button__copy strong {
+    font-size: 0.95rem !important;
+  }
+
+  .topbar-profile-cluster {
+    min-height: 3rem !important;
+  }
+
+  .topbar-profile-cluster .topbar-profile {
+    min-height: 2.9rem !important;
+    padding: 0.25rem 0.32rem !important;
+  }
+
+  .topbar-profile-cluster .account-button__copy {
+    display: none !important;
+  }
+
+  .topbar-logout {
+    min-height: 2.9rem !important;
+    min-width: 3rem !important;
+    width: 3rem !important;
+  }
+}

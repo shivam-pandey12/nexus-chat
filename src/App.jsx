@@ -2568,7 +2568,7 @@ export default function App() {
               <button className="account-button topbar-profile rounded-full border border-[var(--line)] bg-[var(--surface-inset)] px-3 py-2 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow)]" type="button" onClick={() => navigateView('profile')}>
                 <ProfileAvatar profile={mergeDisplayProfile(accountProfile, profile)} />
                 <span className="account-button__copy">
-                  <strong>{mergeDisplayProfile(accountProfile, profile).displayName}</strong>
+                  <strong>{isLoggedIn ? 'Profile' : mergeDisplayProfile(accountProfile, profile).displayName}</strong>
                   <em>{isLoggedIn ? 'Google profile' : 'Guest profile'}</em>
                 </span>
               </button>

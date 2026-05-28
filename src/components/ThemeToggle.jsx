@@ -11,7 +11,7 @@ export default function ThemeToggle({ theme, onToggle }) {
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
       aria-pressed={isDark}
     >
-      <Icon name={isDark ? 'moon' : 'sun'} size={20} />
+      <Icon name={isDark ? 'sun' : 'moon'} size={20} />
     </button>
   );
 }
