@@ -1680,10 +1680,11 @@ export default function App() {
     );
   }
 
-  function handleSendCardMessage(messageType, content, metadata = {}, categoryToolType = '') {
+  function handleSendCardMessage(messageType, content, metadata = {}, categoryToolType = '', categoryToolId = '') {
     handleSend(content, null, {
       messageType,
       categoryToolType,
+      categoryToolId,
       metadata,
     });
   }
@@ -2083,6 +2084,8 @@ export default function App() {
       if (options.success) {
         addToast(options.success);
       }
+
+      options.onSuccess?.(response);
     });
   }
 

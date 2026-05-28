@@ -43,8 +43,8 @@ export default function CategoryToolsPanel({
     setDrafts((current) => ({ ...current, [key]: value }));
   }
 
-  function createTool(toolType, payload = {}, success = 'Tool added') {
-    onToolAction?.('categoryTool:create', { toolType, ...payload }, { success });
+  function createTool(toolType, payload = {}, success = 'Tool added', onSuccess) {
+    onToolAction?.('categoryTool:create', { toolType, ...payload }, { success, onSuccess });
   }
 
   function updateTool(toolId, payload = {}, success = 'Tool updated') {
@@ -235,7 +235,28 @@ export default function CategoryToolsPanel({
             }}
             onPoll={() => {
               const options = [drafts.pollA, drafts.pollB, drafts.pollC, drafts.pollD].filter(Boolean);
-              createTool('quick_poll', { title: drafts.pollQuestion, metadata: { options } }, 'Poll created');
+              const question = drafts.pollQuestion;
+              createTool(
+                'quick_poll',
+                { title: question, metadata: { options } },
+                'Poll posted in chat',
+                (response) => {
+                  const tool = response?.tool;
+                  const safeOptions = tool?.metadata?.options?.length ? tool.metadata.options : options;
+                  onSendCardMessage?.(
+                    'poll_card',
+                    question,
+                    {
+                      question,
+                      options: safeOptions,
+                      results: tool?.metadata?.results || safeOptions.map(() => 0),
+                    },
+                    'quick_poll',
+                    tool?.toolId || '',
+                  );
+                  ['pollQuestion', 'pollA', 'pollB', 'pollC', 'pollD'].forEach((key) => updateDraft(key, ''));
+                },
+              );
             }}
             onVote={(toolId, optionIndex) => onToolAction?.('categoryTool:pollVote', { toolId, optionIndex }, { success: 'Vote counted' })}
           />
@@ -278,6 +299,7 @@ export function CategoryQuickTools({
   onToggleCodeMode,
   onInsertComposerText,
   onSendTopic,
+  onOpenPoll,
 }) {
   const category = getCategoryConfig(room?.categorySlug || room?.category);
   const risk = category.slug === 'coding' ? detectCodingSecretRisk(draft || '') : { risky: false };
@@ -298,6 +320,11 @@ export function CategoryQuickTools({
       {isToolEnabledForCategory('topic_spinner', category.slug) && (
         <button className="tool-chip inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-inset)] px-3 py-2 text-xs font-black transition-all hover:-translate-y-0.5" type="button" onClick={onSendTopic}>
           <Icon name="shuffle" size={15} /> Topic
+        </button>
+      )}
+      {isToolEnabledForCategory('quick_poll', category.slug) && (
+        <button className="tool-chip inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-inset)] px-3 py-2 text-xs font-black transition-all hover:-translate-y-0.5" type="button" onClick={onOpenPoll}>
+          <Icon name="shuffle" size={15} /> Poll
         </button>
       )}
       {isToolEnabledForCategory('match_invite', category.slug) && (

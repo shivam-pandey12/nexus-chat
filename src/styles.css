@@ -6779,6 +6779,9 @@ button.profile-chip:hover {
 
 .feedback-backdrop {
   padding: clamp(12px, 4vw, 28px);
+  z-index: 340 !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .feedback-modal {
@@ -6786,9 +6789,9 @@ button.profile-chip:hover {
   display: grid;
   gap: 18px;
   margin: auto;
-  max-height: min(92vh, 980px);
+  max-height: calc(100dvh - clamp(24px, 6vw, 56px));
   max-width: 760px;
-  overflow: auto;
+  overflow-y: auto !important;
   padding: clamp(20px, 4vw, 34px);
   position: relative;
   width: min(100%, 760px);
@@ -6941,7 +6944,7 @@ button.profile-chip:hover {
 
   .feedback-modal {
     border-radius: var(--radius-lg);
-    max-height: calc(100vh - 18px);
+    max-height: calc(100dvh - 18px);
   }
 
   .onboarding-coach {
@@ -7623,6 +7626,41 @@ button.profile-chip:hover {
   padding: 9px 12px;
 }
 
+.composer-poll-card {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.composer-poll-card__head {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.composer-poll-card__head strong,
+.composer-poll-card__head span {
+  display: block;
+}
+
+.composer-poll-card__head span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.composer-poll-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.composer-poll-grid > :first-child,
+.composer-poll-card__post {
+  grid-column: 1 / -1;
+}
+
 .composer textarea.is-code-mode {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   min-height: 130px;
@@ -7687,6 +7725,75 @@ button.profile-chip:hover {
   padding: 4px 10px;
 }
 
+.message-card--poll_card {
+  background:
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--category-accent, var(--accent)) 16%, transparent), transparent 34%),
+    var(--surface-panel) !important;
+}
+
+.message-card__poll-options {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.3rem;
+}
+
+.message-card__poll-option {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-strong), transparent 12%);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  color: var(--text);
+  display: grid;
+  gap: 0.28rem;
+  min-height: 3.2rem;
+  overflow: hidden;
+  padding: 0.68rem 0.82rem;
+  position: relative;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.message-card__poll-option:not(:disabled) {
+  cursor: pointer;
+}
+
+.message-card__poll-option:not(:disabled):hover,
+.message-card__poll-option:not(:disabled):focus-visible {
+  border-color: color-mix(in srgb, var(--category-accent, var(--accent)) 36%, var(--line));
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.message-card__poll-option:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.message-card__poll-option strong,
+.message-card__poll-option em {
+  position: relative;
+  z-index: 1;
+}
+
+.message-card__poll-option strong {
+  font-weight: 750;
+}
+
+.message-card__poll-option em,
+.message-card__poll-options small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: normal;
+}
+
+.message-card__poll-fill {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--category-accent, var(--accent)) 22%, transparent), transparent);
+  inset: 0 auto 0 0;
+  opacity: 0.72;
+  position: absolute;
+  transition: width 240ms ease;
+}
+
 @media (max-width: 720px) {
   .tool-inline-form,
   .tool-form-grid,
@@ -7698,6 +7805,10 @@ button.profile-chip:hover {
   .composer-warning {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .composer-poll-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -8322,6 +8433,7 @@ textarea {
 .composer > .composer-reply,
 .composer > .category-quick-tools,
 .composer > .composer-warning,
+.composer > .composer-poll-card,
 .composer > .mention-suggestions {
   grid-column: 1 / -1;
 }
@@ -11608,6 +11720,7 @@ body,
 .composer > .composer-reply,
 .composer > .category-quick-tools,
 .composer > .composer-warning,
+.composer > .composer-poll-card,
 .composer > .mention-suggestions {
   grid-column: 1 / -1;
 }

@@ -65,6 +65,8 @@ export default function ChatRoom({
   const [announcementBody, setAnnouncementBody] = useState('');
   const [codeMode, setCodeMode] = useState(false);
   const [secretWarningAccepted, setSecretWarningAccepted] = useState(false);
+  const [pollComposerOpen, setPollComposerOpen] = useState(false);
+  const [pollDraft, setPollDraft] = useState(() => emptyPollDraft());
   const [profileTarget, setProfileTarget] = useState(null);
   const [profilePreview, setProfilePreview] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -194,6 +196,51 @@ export default function ChatRoom({
   function sendRandomTopic() {
     const topic = STATIC_TOPIC_PROMPTS[Math.floor(Math.random() * STATIC_TOPIC_PROMPTS.length)];
     onSendCardMessage?.('topic_card', topic, { topic }, 'topic_spinner');
+  }
+
+  function updatePollDraft(key, value) {
+    setPollDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function submitPollFromComposer() {
+    const question = pollDraft.question.trim();
+    const options = [pollDraft.optionA, pollDraft.optionB, pollDraft.optionC, pollDraft.optionD]
+      .map((option) => option.trim())
+      .filter(Boolean);
+
+    if (!question || options.length < 2) {
+      onToast?.('Polls need a question and at least two options.', 'error');
+      return;
+    }
+
+    onCategoryToolAction?.(
+      'categoryTool:create',
+      {
+        toolType: 'quick_poll',
+        title: question,
+        metadata: { options },
+      },
+      {
+        success: 'Poll posted in chat',
+        onSuccess: (response) => {
+          const tool = response?.tool;
+          const safeOptions = tool?.metadata?.options?.length ? tool.metadata.options : options;
+          onSendCardMessage?.(
+            'poll_card',
+            question,
+            {
+              question,
+              options: safeOptions,
+              results: tool?.metadata?.results || safeOptions.map(() => 0),
+            },
+            'quick_poll',
+            tool?.toolId || '',
+          );
+          setPollDraft(emptyPollDraft());
+          setPollComposerOpen(false);
+        },
+      },
+    );
   }
 
   function handleCategoryMessageAction(message, toolType, label) {
@@ -427,6 +474,10 @@ export default function ChatRoom({
                   onOpenProfile={() => openProfile(toProfileTarget(message))}
                   onJumpToReply={jumpToMessage}
                   roomCategory={roomCategory.slug}
+                  categoryTools={categoryTools}
+                  onPollVote={(toolId, optionIndex) =>
+                    onCategoryToolAction?.('categoryTool:pollVote', { toolId, optionIndex }, { success: 'Vote counted' })
+                  }
                   onCategoryMessageAction={(toolType, label) => handleCategoryMessageAction(message, toolType, label)}
                 />
               );
@@ -461,7 +512,31 @@ export default function ChatRoom({
             onToggleCodeMode={() => setCodeMode((current) => !current)}
             onInsertComposerText={insertComposerText}
             onSendTopic={sendRandomTopic}
+            onOpenPoll={() => setPollComposerOpen((current) => !current)}
           />
+          {pollComposerOpen && isToolEnabledForCategory('quick_poll', roomCategory.slug) && (
+            <div className={cn('composer-poll-card', tw.cardCompact)}>
+              <div className="composer-poll-card__head">
+                <div>
+                  <strong>Quick poll</strong>
+                  <span>Post a vote card directly into this chat.</span>
+                </div>
+                <button className="icon-button" type="button" onClick={() => setPollComposerOpen(false)} aria-label="Close poll composer">
+                  <Icon name="close" size={16} />
+                </button>
+              </div>
+              <div className="composer-poll-grid">
+                <input className={cn('premium-input', tw.input)} placeholder="Poll question" value={pollDraft.question} onChange={(event) => updatePollDraft('question', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} placeholder="Option 1" value={pollDraft.optionA} onChange={(event) => updatePollDraft('optionA', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} placeholder="Option 2" value={pollDraft.optionB} onChange={(event) => updatePollDraft('optionB', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} placeholder="Option 3 optional" value={pollDraft.optionC} onChange={(event) => updatePollDraft('optionC', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} placeholder="Option 4 optional" value={pollDraft.optionD} onChange={(event) => updatePollDraft('optionD', event.target.value)} />
+                <button className={cn('button button--soft composer-poll-card__post', tw.buttonSoft)} type="button" onClick={submitPollFromComposer}>
+                  Post poll
+                </button>
+              </div>
+            </div>
+          )}
           {codeMode && codingSecretRisk.risky && (
               <div className={cn('composer-warning', tw.cardCompact, 'mb-3 flex flex-wrap items-center gap-3')}>
               <Icon name="shield" size={16} />
@@ -846,6 +921,16 @@ export default function ChatRoom({
   );
 }
 
+function emptyPollDraft() {
+  return {
+    question: '',
+    optionA: '',
+    optionB: '',
+    optionC: '',
+    optionD: '',
+  };
+}
+
 function MessageBubble({
   message,
   isMine,
@@ -862,6 +947,8 @@ function MessageBubble({
   onOpenProfile,
   onJumpToReply,
   roomCategory,
+  categoryTools,
+  onPollVote,
   onCategoryMessageAction,
 }) {
   const time = new Intl.DateTimeFormat([], {
@@ -899,7 +986,7 @@ function MessageBubble({
           </button>
         )}
 
-        <MessageContent message={message} isDeleted={isDeleted} />
+        <MessageContent message={message} isDeleted={isDeleted} categoryTools={categoryTools} onPollVote={onPollVote} />
 
         {message.categoryMarkers?.length > 0 && (
           <div className="message-marker-row">
@@ -998,7 +1085,7 @@ function MessageBubble({
   );
 }
 
-function MessageContent({ message, isDeleted }) {
+function MessageContent({ message, isDeleted, categoryTools = [], onPollVote }) {
   if (isDeleted) {
     return <p className="message__content">Message deleted</p>;
   }
@@ -1018,7 +1105,7 @@ function MessageContent({ message, isDeleted }) {
   }
 
   if (['match_invite', 'score_card', 'topic_card', 'poll_card'].includes(message.messageType)) {
-    return <SpecialMessageCard message={message} />;
+    return <SpecialMessageCard message={message} categoryTools={categoryTools} onPollVote={onPollVote} />;
   }
 
   return (
@@ -1028,7 +1115,11 @@ function MessageContent({ message, isDeleted }) {
   );
 }
 
-function SpecialMessageCard({ message }) {
+function SpecialMessageCard({ message, categoryTools = [], onPollVote }) {
+  const linkedTool = categoryTools.find((tool) => tool.toolId && tool.toolId === message.categoryToolId) || null;
+  const pollOptions = linkedTool?.metadata?.options?.length ? linkedTool.metadata.options : message.metadata?.options || [];
+  const pollResults = linkedTool?.metadata?.results?.length ? linkedTool.metadata.results : message.metadata?.results || [];
+  const pollTotal = pollResults.reduce((sum, count) => sum + Number(count || 0), 0);
   const card = {
     match_invite: {
       icon: 'gamepad',
@@ -1047,7 +1138,7 @@ function SpecialMessageCard({ message }) {
     },
     poll_card: {
       icon: 'shuffle',
-      title: message.metadata?.question || 'Poll',
+      title: linkedTool?.title || message.metadata?.question || 'Poll',
       label: 'Live poll',
     },
   }[message.messageType] || { icon: 'sparkle', title: 'Room card', label: 'Category tool' };
@@ -1059,7 +1150,28 @@ function SpecialMessageCard({ message }) {
         <em>{card.label}</em>
       </div>
       <p>{message.content}</p>
-      {Array.isArray(message.metadata?.options) && (
+      {message.messageType === 'poll_card' && pollOptions.length > 0 ? (
+        <div className="message-card__poll-options">
+          {pollOptions.map((option, index) => {
+            const count = Number(pollResults[index] || 0);
+            const percentage = pollTotal ? Math.round((count / pollTotal) * 100) : 0;
+            return (
+              <button
+                className="message-card__poll-option"
+                key={`${option}_${index}`}
+                type="button"
+                onClick={() => linkedTool?.toolId && onPollVote?.(linkedTool.toolId, index)}
+                disabled={!linkedTool?.toolId}
+              >
+                <span className="message-card__poll-fill" style={{ width: `${percentage}%` }} aria-hidden="true" />
+                <strong>{option}</strong>
+                <em>{count} vote{count === 1 ? '' : 's'} · {percentage}%</em>
+              </button>
+            );
+          })}
+          <small>{pollTotal ? `${pollTotal} total vote${pollTotal === 1 ? '' : 's'}` : 'No votes yet. Tap an option to vote.'}</small>
+        </div>
+      ) : Array.isArray(message.metadata?.options) && (
         <div className="message-card__options">
           {message.metadata.options.map((option, index) => (
             <span key={`${option}_${index}`}>{option}</span>
