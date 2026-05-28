@@ -13318,3 +13318,80 @@ button.theme-toggle {
     width: 3rem !important;
   }
 }
+
+/* Onboarding guide must open inside the viewport, not hang off the page bottom. */
+.onboarding-coach.glass-panel,
+.onboarding-coach {
+  animation: onboardingCoachPop 220ms cubic-bezier(0.2, 0.9, 0.22, 1.12) both !important;
+  bottom: auto !important;
+  left: 50% !important;
+  max-height: min(84dvh, 42rem) !important;
+  max-width: min(40rem, calc(100vw - 2rem)) !important;
+  overflow-y: auto !important;
+  padding: clamp(1.35rem, 2.5vw, 2rem) !important;
+  position: fixed !important;
+  right: auto !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(40rem, calc(100vw - 2rem)) !important;
+  z-index: 360 !important;
+}
+
+.onboarding-coach h2 {
+  font-size: clamp(2rem, 5vw, 3.25rem) !important;
+  line-height: 1.08 !important;
+  margin: 0 !important;
+  max-width: 12ch;
+  text-wrap: balance;
+}
+
+.onboarding-coach > p:not(.eyebrow) {
+  font-size: clamp(1rem, 1.5vw, 1.18rem) !important;
+  line-height: 1.65 !important;
+  max-width: 32rem;
+}
+
+.onboarding-coach__rail {
+  padding-right: 4.6rem !important;
+}
+
+.onboarding-coach__close {
+  height: 3.4rem !important;
+  min-height: 3.4rem !important;
+  min-width: 3.4rem !important;
+  width: 3.4rem !important;
+}
+
+@keyframes onboardingCoachPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 1rem)) scale(0.985);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .onboarding-coach.glass-panel,
+  .onboarding-coach {
+    max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    max-width: calc(100vw - 1.25rem) !important;
+    padding: 1.15rem !important;
+    width: calc(100vw - 1.25rem) !important;
+  }
+
+  .onboarding-coach h2 {
+    font-size: clamp(1.8rem, 11vw, 2.65rem) !important;
+    max-width: 11ch;
+  }
+
+  .onboarding-coach__close {
+    height: 3rem !important;
+    min-height: 3rem !important;
+    min-width: 3rem !important;
+    width: 3rem !important;
+  }
+}
