@@ -13205,6 +13205,7 @@ button.theme-toggle {
   color: var(--text) !important;
   gap: 0 !important;
   min-height: 3.2rem !important;
+  overflow: visible !important;
   padding: 0 0.2rem !important;
 }
 
@@ -13216,16 +13217,22 @@ button.theme-toggle {
 
 .topbar__quick-actions > .account-button.account-button--login .account-button__copy {
   display: block !important;
+  overflow: visible !important;
+  padding-block: 0.08rem 0.14rem !important;
   text-align: left !important;
 }
 
 .topbar__quick-actions > .account-button.account-button--login .account-button__copy strong {
   color: var(--text) !important;
+  display: block !important;
   font-size: 1rem !important;
   font-weight: 740 !important;
   letter-spacing: 0 !important;
-  line-height: 1 !important;
+  line-height: 1.24 !important;
   max-width: none !important;
+  overflow: visible !important;
+  padding-bottom: 0.02rem !important;
+  text-overflow: clip !important;
 }
 
 .topbar-profile-cluster {
@@ -13393,5 +13400,117 @@ button.theme-toggle {
     min-height: 3rem !important;
     min-width: 3rem !important;
     width: 3rem !important;
+  }
+}
+
+/* Final brand/profile/footer polish using the real Nexus logo asset. */
+.brand__mark.brand__mark--image,
+.landing-footer__brand .brand__mark.brand__mark--image {
+  background: hsl(var(--surface-hsl) / 0.9) !important;
+  border: 1px solid hsl(var(--border-hsl) / 0.82) !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 0 0 4px hsl(var(--surface-hsl) / 0.82),
+    0 12px 28px hsl(var(--accent-hsl) / 0.14) !important;
+  color: transparent !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.brand__mark--image img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  width: 100%;
+}
+
+.topbar .brand__mark.brand__mark--image {
+  height: 3.05rem !important;
+  width: 3.05rem !important;
+}
+
+.landing-footer__brand .brand__mark.brand__mark--image {
+  height: 3.35rem !important;
+  width: 3.35rem !important;
+}
+
+.topbar-profile-cluster {
+  background: hsl(var(--surface-hsl) / 0.86) !important;
+  border-color: hsl(var(--border-hsl) / 0.86) !important;
+  min-height: 3.55rem !important;
+}
+
+.topbar-profile-cluster .topbar-profile {
+  min-height: 3.5rem !important;
+  padding: 0.32rem 1rem 0.32rem 0.42rem !important;
+}
+
+.topbar-profile-cluster .account-avatar {
+  border: 1px solid hsl(var(--border-hsl) / 0.76) !important;
+  box-shadow: 0 0 0 3px hsl(var(--surface-hsl) / 0.9) !important;
+  height: 2.5rem !important;
+  width: 2.5rem !important;
+}
+
+.topbar-profile-cluster .account-button__copy strong {
+  font-size: 1rem !important;
+  font-weight: 720 !important;
+  line-height: 1.18 !important;
+}
+
+.topbar-logout {
+  min-height: 3.5rem !important;
+}
+
+.landing-footer .footer-links {
+  align-items: start !important;
+  display: grid !important;
+  gap: 1.6rem clamp(2rem, 4vw, 4.5rem) !important;
+  grid-template-columns: repeat(4, minmax(8.5rem, 1fr)) !important;
+}
+
+.footer-links__column {
+  align-items: flex-start;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.footer-links__column h3 {
+  color: var(--text) !important;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: 860 !important;
+  letter-spacing: 0.08em !important;
+  line-height: 1.1;
+  margin: 0 0 0.15rem !important;
+  text-transform: uppercase;
+}
+
+.footer-links__column button {
+  justify-self: start;
+}
+
+@media (max-width: 1080px) {
+  .landing-footer .footer-links {
+    grid-template-columns: repeat(2, minmax(9rem, 1fr)) !important;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar .brand__mark.brand__mark--image {
+    height: 2.65rem !important;
+    width: 2.65rem !important;
+  }
+
+  .topbar-profile-cluster .account-avatar {
+    height: 2.35rem !important;
+    width: 2.35rem !important;
+  }
+
+  .landing-footer .footer-links {
+    gap: 1.35rem 1rem !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }

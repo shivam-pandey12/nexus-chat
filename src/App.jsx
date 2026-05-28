@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import nexusLogoUrl from '../logo.png';
 import AdminPanel from './components/AdminPanel.jsx';
 import ChatRoom from './components/ChatRoom.jsx';
 import BillingPage from './components/BillingPage.jsx';
@@ -30,6 +31,7 @@ import StorePage from './components/StorePage.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
 import ToastStack from './components/ToastStack.jsx';
 import { cn } from './components/ui/premium.js';
+import SidePanelTrigger, { SIDE_PANEL_TRIGGER_VARIANTS } from '../reusable/side-panel-triggers/SidePanelTrigger.jsx';
 import {
   createPaymentOrder,
   banCommunityMember,
@@ -132,6 +134,11 @@ const DEFAULT_LAUNCH_STATUS = {
   communitiesEnabled: true,
   storeEnabled: true,
 };
+
+const SIDE_PANEL_TRIGGER_STORAGE_KEY = 'nexusChat.sideTriggerVariant.v2';
+const LEGACY_SIDE_PANEL_TRIGGER_STORAGE_KEY = 'nexusChat.sideTriggerVariant';
+const DEFAULT_SIDE_PANEL_TRIGGER_VARIANT = 'infinity';
+
 const DEFAULT_PWA_STATUS = {
   enabled: true,
   manifest: true,
@@ -155,6 +162,7 @@ export default function App() {
   const [authToken, setAuthToken] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [theme, setTheme] = useState(() => loadTheme());
+  const sidePanelTriggerVariant = useMemo(resolveSidePanelTriggerVariant, []);
   const [view, setView] = useState(() => {
     if (initialPathView && !initialInviteCode) {
       return initialPathView;
@@ -1319,6 +1327,18 @@ export default function App() {
     }
   }
 
+  function requestLogout() {
+    requestConfirmation({
+      eyebrow: 'Account action',
+      title: 'Logout from Nexus?',
+      body: 'Your Google session will be disconnected on this browser. Guest chat will stay available so you can keep using Nexus quickly.',
+      confirmLabel: 'Logout',
+      cancelLabel: 'Stay logged in',
+      tone: 'danger',
+      onConfirm: handleLogout,
+    });
+  }
+
   function handleCreateRoom(payload) {
     emitWithNotice('room:create', payload, { success: 'Room created' });
   }
@@ -2307,7 +2327,7 @@ export default function App() {
         onDisablePush={handleDisablePush}
         onNotificationPreferences={handleNotificationPreferences}
         onLogin={() => handleDirectLogin('profile')}
-        onLogout={handleLogout}
+        onLogout={requestLogout}
         onFeedback={() => setFeedbackOpen(true)}
         onSave={handleProfileSave}
         onUnblock={handleUnblockUser}
@@ -2517,7 +2537,9 @@ export default function App() {
       <nav className="topbar mx-auto mt-3 flex w-[calc(100%_-_1.5rem)] max-w-[1540px] items-center gap-3 rounded-[2rem] border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-3 shadow-[var(--shadow)] backdrop-blur-2xl sm:mt-4 sm:w-[calc(100%_-_2rem)] sm:px-4" aria-label="Nexus Chat navigation">
         <div className="topbar__aura" aria-hidden="true" />
         <button className="brand" type="button" onClick={navigateHome}>
-          <span className="brand__mark">N</span>
+          <span className="brand__mark brand__mark--image">
+            <img src={nexusLogoUrl} alt="" />
+          </span>
           <span className="brand__copy">
             <strong>Nexus Chat</strong>
             <em>MH Horizon</em>
@@ -2573,7 +2595,7 @@ export default function App() {
                 </span>
               </button>
               {isLoggedIn && (
-                <button className="topbar-logout" type="button" onClick={handleLogout} aria-label="Logout">
+                <button className="topbar-logout" type="button" onClick={requestLogout} aria-label="Logout">
                   <Icon name="logout" size={20} />
                 </button>
               )}
@@ -2586,15 +2608,11 @@ export default function App() {
         aria-hidden="true"
         onClick={() => setSidePanelOpen(false)}
       />
-      <button
-        className={`side-nav-handle ${sidePanelOpen ? 'is-open' : ''} shadow-[var(--shadow)] transition-all duration-300 hover:scale-110`}
-        type="button"
-        aria-label={sidePanelOpen ? 'Close navigation panel' : 'Open navigation panel'}
-        aria-expanded={sidePanelOpen}
+      <SidePanelTrigger
+        variant={sidePanelTriggerVariant}
+        open={sidePanelOpen}
         onClick={() => setSidePanelOpen((current) => !current)}
-      >
-        <span aria-hidden="true">{sidePanelOpen ? '‹' : '›'}</span>
-      </button>
+      />
       <aside className={`floating-side-nav ${sidePanelOpen ? 'is-open' : ''} border border-[var(--line)] bg-[var(--surface-strong)] shadow-[var(--shadow-lg)] backdrop-blur-2xl`} aria-label="Main navigation">
         <div className="floating-side-nav__glow" aria-hidden="true" />
         <div className="floating-side-nav__header">
@@ -2702,7 +2720,7 @@ export default function App() {
         </div>
         <div className="side-nav-footer">
           {isLoggedIn ? (
-            <button className="button button--ghost button--wide account-chip--logout" type="button" onClick={() => { setSidePanelOpen(false); handleLogout(); }}>
+            <button className="button button--ghost button--wide account-chip--logout" type="button" onClick={() => { setSidePanelOpen(false); requestLogout(); }}>
               <Icon name="logout" size={18} />
               Logout
             </button>
@@ -2767,6 +2785,24 @@ export default function App() {
 function getInviteCodeFromPath() {
   const match = window.location.pathname.match(/^\/room\/([a-zA-Z0-9_-]+)$/);
   return match?.[1]?.toUpperCase() || '';
+}
+
+function resolveSidePanelTriggerVariant() {
+  if (typeof window === 'undefined') {
+    return DEFAULT_SIDE_PANEL_TRIGGER_VARIANT;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get('sideTrigger') || params.get('navTrigger');
+  window.localStorage.removeItem(LEGACY_SIDE_PANEL_TRIGGER_STORAGE_KEY);
+  const requested = fromQuery || DEFAULT_SIDE_PANEL_TRIGGER_VARIANT;
+  const safeVariant = SIDE_PANEL_TRIGGER_VARIANTS.includes(requested) ? requested : DEFAULT_SIDE_PANEL_TRIGGER_VARIANT;
+
+  if (fromQuery && safeVariant === fromQuery) {
+    window.localStorage.setItem(SIDE_PANEL_TRIGGER_STORAGE_KEY, safeVariant);
+  }
+
+  return safeVariant;
 }
 
 function HeaderNavDropdown({ group, open, onOpen, onClose }) {

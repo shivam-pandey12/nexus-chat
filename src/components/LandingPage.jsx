@@ -1,4 +1,5 @@
 import { getCategoryOptions } from '../../shared/categoryConfig.js';
+import nexusLogoUrl from '../../logo.png';
 import CategoryBadge from './CategoryBadge.jsx';
 import { cn, tw } from './ui/premium.js';
 
@@ -171,23 +172,37 @@ export default function LandingPage({ onStart, onExplore, onCreatePrivate, onNav
 
       <footer className="landing-footer">
         <div className="landing-footer__brand">
-          <span className="brand__mark">N</span>
+          <span className="brand__mark brand__mark--image">
+            <img src={nexusLogoUrl} alt="" />
+          </span>
           <div>
             <strong>Nexus Chat</strong>
             <p>Nexus Chat is a focused people-to-people social workspace for rooms, communities, quick talks, and safe MH Horizon conversations.</p>
           </div>
         </div>
         <div className="footer-links" aria-label="MH Horizon launch links">
-          <button type="button" onClick={onStart}>Start Chatting</button>
-          <button type="button" onClick={onExplore}>Explore Rooms</button>
-          <button type="button" onClick={onCreatePrivate}>Private Room</button>
-          <button type="button" onClick={() => onNavigate?.('updates')}>Updates</button>
-          <button type="button" onClick={() => onNavigate?.('privacy')}>Privacy</button>
-          <button type="button" onClick={() => onNavigate?.('terms')}>Terms</button>
-          <button type="button" onClick={() => onNavigate?.('refund-policy')}>Refund</button>
-          <button type="button" onClick={() => onNavigate?.('safety')}>Safety</button>
-          <button type="button" onClick={onFeedback}>Feedback</button>
-          <button type="button" onClick={() => onNavigate?.('contact')}>Contact</button>
+          <div className="footer-links__column">
+            <h3>Chat</h3>
+            <button type="button" onClick={onStart}>Start Chatting</button>
+            <button type="button" onClick={onExplore}>Explore Rooms</button>
+            <button type="button" onClick={onCreatePrivate}>Private Room</button>
+          </div>
+          <div className="footer-links__column">
+            <h3>Product</h3>
+            <button type="button" onClick={() => onNavigate?.('updates')}>Updates</button>
+            <button type="button" onClick={onFeedback}>Feedback</button>
+          </div>
+          <div className="footer-links__column">
+            <h3>Legal</h3>
+            <button type="button" onClick={() => onNavigate?.('privacy')}>Privacy</button>
+            <button type="button" onClick={() => onNavigate?.('terms')}>Terms</button>
+            <button type="button" onClick={() => onNavigate?.('refund-policy')}>Refund</button>
+          </div>
+          <div className="footer-links__column">
+            <h3>Support</h3>
+            <button type="button" onClick={() => onNavigate?.('safety')}>Safety</button>
+            <button type="button" onClick={() => onNavigate?.('contact')}>Contact</button>
+          </div>
         </div>
       </footer>
     </main>
