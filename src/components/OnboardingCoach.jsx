@@ -70,7 +70,7 @@ export default function OnboardingCoach({ profile, accountProfile, isLoggedIn = 
 function getSteps(isLoggedIn) {
   if (isLoggedIn) {
     return [
-      { title: 'Complete your profile', body: 'Your Google-backed identity can keep a display name, portrait, and room memory across devices.' },
+      { title: 'Complete your profile', body: 'Your account identity can keep a display name, portrait, and room memory across devices.' },
       { title: 'Save rooms that matter', body: 'Favorites, My Rooms, notifications, and unread markers help you return to live conversations.' },
       { title: 'Alerts stay calm', body: 'Mentions, replies, and announcements arrive in the bell without turning rooms into noisy feeds.' },
       {

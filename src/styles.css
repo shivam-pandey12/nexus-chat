@@ -7883,6 +7883,60 @@ button.profile-chip:hover {
   font-weight: 900;
 }
 
+.email-auth-card {
+  border-color: color-mix(in srgb, var(--accent), transparent 74%) !important;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent), transparent 84%), transparent 34%),
+    var(--surface-panel-soft) !important;
+}
+
+.email-auth-card__head {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.email-auth-card__head strong,
+.email-auth-card__head span {
+  display: block;
+}
+
+.email-auth-card__head span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.email-auth-toggle {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  padding: 0.22rem;
+}
+
+.email-auth-toggle button {
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 900;
+  min-height: 2.15rem;
+  padding: 0.35rem 0.85rem;
+}
+
+.email-auth-toggle button.is-active {
+  background: var(--accent-strong);
+  color: var(--accent-foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 620px) {
+  .email-auth-card__head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 720px) {
   .tool-inline-form,
   .tool-form-grid,

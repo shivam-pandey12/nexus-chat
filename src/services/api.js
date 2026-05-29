@@ -448,7 +448,7 @@ export async function revokeAdminEntitlement(adminAuth, payload) {
 
 async function authRequest(path, idToken, sessionId, options = {}) {
   if (!idToken) {
-    throw new Error('Google login is required.');
+    throw new Error('Account login is required.');
   }
 
   return requestJson(path, options, {

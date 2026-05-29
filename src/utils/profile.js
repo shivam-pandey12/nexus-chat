@@ -4,6 +4,7 @@ import { CHAT_LIMITS } from '../../shared/chatConfig.js';
 const PROFILE_KEY = 'nexusChat.profile.v1';
 const THEME_KEY = 'nexusChat.theme.v1';
 const FALLBACK_NAMES = ['Guest', 'NexusUser', 'MHGuest'];
+const AUTH_PROVIDERS = new Set(['google', 'password', 'email']);
 
 export function loadProfile() {
   try {
@@ -18,7 +19,7 @@ export function loadProfile() {
       displayName: sanitizeDisplayName(stored.displayName),
       avatar: isKnownAvatar(stored.avatar) ? stored.avatar : AVATARS[0].id,
       userId: sanitizeOptionalId(stored.userId),
-      authProvider: stored.authProvider === 'google' ? 'google' : null,
+      authProvider: sanitizeAuthProvider(stored.authProvider),
       handle: sanitizeHandle(stored.handle),
       status: sanitizeStatus(stored.status || stored.bio),
       profileRingId: sanitizeOptionalId(stored.profileRingId) || '',
@@ -39,7 +40,7 @@ export function saveProfile(profile) {
     displayName: sanitizeDisplayName(profile.displayName),
     avatar: isKnownAvatar(profile.avatar) ? profile.avatar : AVATARS[0].id,
     userId: sanitizeOptionalId(profile.userId),
-    authProvider: profile.authProvider === 'google' ? 'google' : null,
+    authProvider: sanitizeAuthProvider(profile.authProvider),
     handle: sanitizeHandle(profile.handle),
     status: sanitizeStatus(profile.status || profile.bio),
     profileRingId: sanitizeOptionalId(profile.profileRingId) || '',
@@ -182,4 +183,9 @@ function getActivePhotoURL(profile) {
 function sanitizeEmail(value) {
   const text = String(value || '').trim().toLowerCase();
   return /^[^\s@<>]{1,120}@[^\s@<>]{1,120}\.[^\s@<>]{2,24}$/.test(text) ? text : '';
+}
+
+function sanitizeAuthProvider(value) {
+  const provider = String(value || '').trim().toLowerCase();
+  return AUTH_PROVIDERS.has(provider) ? provider : null;
 }

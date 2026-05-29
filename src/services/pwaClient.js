@@ -126,7 +126,7 @@ export async function getPushCapability(publicPwaStatus = {}) {
 
 export async function enablePushNotifications({ idToken, sessionId, deviceLabel = 'Browser device', publicPwaStatus = {}, onForegroundMessage } = {}) {
   if (!idToken) {
-    throw new Error('Google login is required to enable push notifications.');
+    throw new Error('Account login is required to enable push notifications.');
   }
 
   const capability = await getPushCapability(publicPwaStatus);

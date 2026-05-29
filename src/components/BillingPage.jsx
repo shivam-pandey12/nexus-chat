@@ -36,7 +36,7 @@ export default function BillingPage({
         <section className={cn('panel billing-hero', tw.glassSoft, 'mx-auto max-w-2xl p-7 text-center')}>
           <p className="eyebrow">Login required</p>
           <h2>Login to manage billing</h2>
-          <p>Guests can keep chatting for free. Purchases and billing history require Google login.</p>
+          <p>Guests can keep chatting for free. Purchases and billing history require account login.</p>
           <button className={cn('button button--primary', tw.buttonPrimary)} type="button" onClick={onLogin}>Login to buy</button>
         </section>
       ) : (

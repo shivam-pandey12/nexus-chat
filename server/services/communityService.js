@@ -1106,7 +1106,7 @@ export function createCommunityService({ repositories = {}, entitlementService }
     }
 
     if (!actor?.userId) {
-      throw new Error('Google login is required for this community action.');
+      throw new Error('Account login is required for this community action.');
     }
 
     const member = await getMemberRecord(community, actor);
@@ -1517,7 +1517,7 @@ function memberIdFor(user) {
 
 function requireLoggedIn(user) {
   if (!user?.userId) {
-    throw new Error('Google login is required for this action.');
+    throw new Error('Account login is required for this action.');
   }
 }
 

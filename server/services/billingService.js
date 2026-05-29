@@ -418,7 +418,7 @@ function requireBillingReady() {
 
 function requireUser(user) {
   if (!user?.userId) {
-    throw new Error('Google login is required for purchases.');
+    throw new Error('Account login is required for purchases.');
   }
 }
 

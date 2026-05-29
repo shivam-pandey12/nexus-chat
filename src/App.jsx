@@ -74,7 +74,14 @@ import {
   updateMyProfile,
   verifyPayment,
 } from './services/api.js';
-import { isFirebaseAuthConfigured, signInWithGoogle, signOutFirebase, subscribeToFirebaseAuth } from './services/firebaseClient.js';
+import {
+  createEmailPasswordAccount,
+  isFirebaseAuthConfigured,
+  signInWithEmailPassword,
+  signInWithGoogle,
+  signOutFirebase,
+  subscribeToFirebaseAuth,
+} from './services/firebaseClient.js';
 import {
   disablePushNotifications,
   dismissInstallPrompt,
@@ -299,20 +306,22 @@ export default function App() {
           return;
         }
 
-        setProfile((current) =>
-          createLinkedProfile({
+        setProfile((current) => {
+          const provider = session.user.authProvider || (session.user.photoURL ? 'google' : 'password');
+          return createLinkedProfile({
             sessionId: current?.sessionId,
             displayName: current?.displayName || session.user.displayName,
             avatar: current?.avatar,
             handle: current?.handle,
             status: current?.status,
             userId: session.user.userId,
-            photoMode: current?.authProvider === 'google' ? current?.photoMode || 'google' : 'google',
-            photoURL: current?.authProvider === 'google' && current?.photoMode === 'avatar' ? '' : session.user.photoURL,
-            googlePhotoURL: session.user.photoURL || current?.googlePhotoURL || '',
+            authProvider: provider,
+            photoMode: provider === 'google' ? current?.photoMode || 'google' : 'avatar',
+            photoURL: provider === 'google' && current?.photoMode !== 'avatar' ? session.user.photoURL : '',
+            googlePhotoURL: provider === 'google' ? session.user.photoURL || current?.googlePhotoURL || '' : '',
             email: session.user.email,
-          }),
-        );
+          });
+        });
       }),
     [],
   );
@@ -1121,7 +1130,7 @@ export default function App() {
 
   async function handleEnablePush() {
     if (!profile?.userId || !authToken) {
-      addToast('Login with Google to enable push notifications.', 'error');
+      addToast('Login to enable push notifications.', 'error');
       handleDirectLogin('profile');
       return;
     }
@@ -1255,29 +1264,75 @@ export default function App() {
 
     try {
       const result = await signInWithGoogle();
-      const linkedProfile = createLinkedProfile({
-        sessionId: profile?.sessionId,
-        displayName: draftProfile.displayName || result.user.displayName,
-        avatar: draftProfile.avatar,
-        userId: result.user.userId,
-        photoMode: profile?.authProvider === 'google' ? profile?.photoMode || 'google' : 'google',
-        photoURL: profile?.authProvider === 'google' && profile?.photoMode === 'avatar' ? '' : result.user.photoURL,
-        googlePhotoURL: result.user.photoURL || profile?.googlePhotoURL || '',
-        email: result.user.email,
-      });
-      setAuthToken(result.idToken);
-      if (nextViewOverride) {
-        setProfile(linkedProfile);
-        setView(nextViewOverride);
-      } else {
-        handleProfileComplete(linkedProfile);
-      }
-      addToast('Google profile linked for this session');
+      completeFirebaseLogin(result, draftProfile, nextViewOverride, 'google', 'Google profile linked for this session');
     } catch (error) {
       addToast(error instanceof Error ? error.message : 'Google sign-in failed.', 'error');
     } finally {
       setGoogleLoading(false);
     }
+  }
+
+  async function handleEmailAuth(payload = {}, nextViewOverride = '') {
+    const mode = payload.mode === 'signup' ? 'signup' : 'signin';
+
+    if (mode === 'signup' && launchStatus.signupsEnabled === false) {
+      addToast('Email sign-up is paused for this launch mode.', 'error');
+      return;
+    }
+
+    if (!String(payload.email || '').trim() || String(payload.password || '').length < 6) {
+      addToast('Enter a valid email and a password with at least 6 characters.', 'error');
+      return;
+    }
+
+    setGoogleLoading(true);
+
+    try {
+      const result = mode === 'signup'
+        ? await createEmailPasswordAccount({
+            email: payload.email,
+            password: payload.password,
+            displayName: payload.displayName || profile?.displayName || '',
+          })
+        : await signInWithEmailPassword({
+            email: payload.email,
+            password: payload.password,
+          });
+      completeFirebaseLogin(
+        result,
+        { displayName: payload.displayName, avatar: payload.avatar },
+        nextViewOverride,
+        'password',
+        mode === 'signup' ? 'Email account created' : 'Email sign-in complete',
+      );
+    } catch (error) {
+      addToast(getFriendlyAuthError(error), 'error');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  function completeFirebaseLogin(result, draftProfile = {}, nextViewOverride = '', authProvider = 'google', successMessage = 'Account linked') {
+    const displayName = draftProfile.displayName || result.user.displayName || result.user.email?.split('@')?.[0] || 'NexusUser';
+    const linkedProfile = createLinkedProfile({
+      sessionId: profile?.sessionId,
+      displayName,
+      avatar: draftProfile.avatar || profile?.avatar || 'nexus',
+      userId: result.user.userId,
+      authProvider,
+      photoMode: authProvider === 'google' ? profile?.photoMode || 'google' : 'avatar',
+      photoURL: authProvider === 'google' && profile?.photoMode !== 'avatar' ? result.user.photoURL : '',
+      googlePhotoURL: authProvider === 'google' ? result.user.photoURL || profile?.googlePhotoURL || '' : '',
+      email: result.user.email,
+    });
+    setAuthToken(result.idToken);
+    if (nextViewOverride) {
+      setProfile(linkedProfile);
+      setView(nextViewOverride);
+    } else {
+      handleProfileComplete(linkedProfile);
+    }
+    addToast(successMessage);
   }
 
   function handleLoginToBuy() {
@@ -1289,11 +1344,15 @@ export default function App() {
       return;
     }
 
-    handleGoogleSignIn(profile, returnView);
+    setPendingView(returnView);
+    pushViewPath('guest');
+    setView('guest');
   }
 
   function handleDirectLogin(nextViewOverride = view) {
-    handleGoogleSignIn(profile || { displayName: '', avatar: 'nexus' }, nextViewOverride || 'profile');
+    setPendingView(nextViewOverride || 'profile');
+    pushViewPath('guest');
+    setView('guest');
   }
 
   async function handleLogout() {
@@ -1331,7 +1390,7 @@ export default function App() {
     requestConfirmation({
       eyebrow: 'Account action',
       title: 'Logout from Nexus?',
-      body: 'Your Google session will be disconnected on this browser. Guest chat will stay available so you can keep using Nexus quickly.',
+      body: 'Your account session will be disconnected on this browser. Guest chat will stay available so you can keep using Nexus quickly.',
       confirmLabel: 'Logout',
       cancelLabel: 'Stay logged in',
       tone: 'danger',
@@ -1345,7 +1404,7 @@ export default function App() {
 
   async function handleCreateCommunity(payload) {
     if (!isLoggedIn) {
-      addToast('Login with Google to create a community.', 'error');
+      addToast('Login to create a community.', 'error');
       handleDirectLogin('create-community');
       return;
     }
@@ -1361,7 +1420,7 @@ export default function App() {
 
   async function handleBuyProduct(productId) {
     if (!profile?.userId || !authToken) {
-      addToast('Login with Google to buy Nexus premium access.');
+      addToast('Login to buy Nexus premium access.');
       handleLoginToBuy();
       return;
     }
@@ -2126,8 +2185,11 @@ export default function App() {
       <GuestEntry
         onComplete={handleProfileComplete}
         onGoogleSignIn={handleGoogleSignIn}
+        onEmailAuth={handleEmailAuth}
         googleEnabled={isFirebaseAuthConfigured()}
         googleLoading={googleLoading}
+        emailEnabled={isFirebaseAuthConfigured()}
+        emailLoading={googleLoading}
         guestEnabled={launchStatus.guestChatEnabled !== false}
         signupsEnabled={launchStatus.signupsEnabled !== false}
       />
@@ -2567,7 +2629,7 @@ export default function App() {
               </span>
               <span className="account-button__copy">
                 <strong>Login</strong>
-                <em>Google account</em>
+                <em>Google or email</em>
               </span>
             </button>
           )}
@@ -2594,7 +2656,7 @@ export default function App() {
                 <ProfileAvatar profile={mergeDisplayProfile(accountProfile, profile)} />
                 <span className="account-button__copy">
                   <strong>{isLoggedIn ? 'Profile' : mergeDisplayProfile(accountProfile, profile).displayName}</strong>
-                  <em>{isLoggedIn ? 'Google profile' : 'Guest profile'}</em>
+                  <em>{isLoggedIn ? 'Account profile' : 'Guest profile'}</em>
                 </span>
               </button>
               {isLoggedIn && (
@@ -2730,7 +2792,7 @@ export default function App() {
           ) : isFirebaseAuthConfigured() && launchStatus.signupsEnabled !== false ? (
             <button className="button button--primary button--wide" type="button" onClick={() => { setSidePanelOpen(false); handleDirectLogin('profile'); }}>
               <Icon name="login" size={18} />
-              Login with Google
+              Login / Sign up
             </button>
           ) : (
             <span>Guest mode active</span>
@@ -2976,6 +3038,32 @@ function getViewLabel(view) {
   return labels[view] || 'Nexus Chat';
 }
 
+function getFriendlyAuthError(error) {
+  const message = error instanceof Error ? error.message : '';
+
+  if (message.includes('auth/email-already-in-use')) {
+    return 'That email already has an account. Try signing in.';
+  }
+
+  if (message.includes('auth/invalid-credential') || message.includes('auth/wrong-password')) {
+    return 'Email or password is incorrect.';
+  }
+
+  if (message.includes('auth/user-not-found')) {
+    return 'No account exists for that email yet.';
+  }
+
+  if (message.includes('auth/weak-password')) {
+    return 'Use a stronger password with at least 6 characters.';
+  }
+
+  if (message.includes('auth/invalid-email')) {
+    return 'Enter a valid email address.';
+  }
+
+  return message || 'Email sign-in failed.';
+}
+
 function mergeSocketProfile(currentProfile, serverProfile, authToken) {
   const shouldPreserveAccount =
     authToken &&
@@ -2993,13 +3081,13 @@ function mergeSocketProfile(currentProfile, serverProfile, authToken) {
         googlePhotoURL: currentProfile.googlePhotoURL || currentProfile.photoURL || serverProfile?.photoURL || '',
         photoMode: currentProfile.photoMode || serverProfile?.photoMode || 'avatar',
         email: currentProfile.email || serverProfile?.email || '',
-        authProvider: 'google',
+        authProvider: currentProfile.authProvider || serverProfile?.authProvider || 'password',
       }
     : authToken && serverProfile?.userId
       ? {
           ...currentProfile,
           ...serverProfile,
-          authProvider: 'google',
+          authProvider: currentProfile?.authProvider || serverProfile?.authProvider || 'password',
         }
       : {
           ...currentProfile,

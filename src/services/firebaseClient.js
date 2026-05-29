@@ -1,5 +1,14 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { GoogleAuthProvider, getAuth, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  updateProfile,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -43,6 +52,32 @@ export async function signInWithGoogle() {
   };
 }
 
+export async function signInWithEmailPassword({ email, password }) {
+  if (!isFirebaseAuthConfigured()) {
+    throw new Error('Email sign-in is not configured here yet.');
+  }
+
+  const auth = getAuth(getFirebaseApp());
+  const credential = await signInWithEmailAndPassword(auth, normalizeEmail(email), password);
+  return toAuthSession(credential.user);
+}
+
+export async function createEmailPasswordAccount({ email, password, displayName = '' }) {
+  if (!isFirebaseAuthConfigured()) {
+    throw new Error('Email sign-up is not configured here yet.');
+  }
+
+  const auth = getAuth(getFirebaseApp());
+  const credential = await createUserWithEmailAndPassword(auth, normalizeEmail(email), password);
+  const cleanName = String(displayName || '').trim().slice(0, 40);
+
+  if (cleanName) {
+    await updateProfile(credential.user, { displayName: cleanName });
+  }
+
+  return toAuthSession(credential.user);
+}
+
 export function subscribeToFirebaseAuth(onChange) {
   if (!isFirebaseAuthConfigured()) {
     onChange(null);
@@ -55,15 +90,7 @@ export function subscribeToFirebaseAuth(onChange) {
       return;
     }
 
-    onChange({
-      idToken: await user.getIdToken(),
-      user: {
-        userId: user.uid,
-        displayName: user.displayName || '',
-        email: user.email || '',
-        photoURL: user.photoURL || '',
-      },
-    });
+    onChange(await toAuthSession(user));
   });
 }
 
@@ -77,4 +104,35 @@ export async function signOutFirebase() {
 
 export function getFirebaseApp() {
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
+}
+
+async function toAuthSession(user) {
+  return {
+    idToken: await user.getIdToken(),
+    user: {
+      userId: user.uid,
+      displayName: user.displayName || '',
+      email: user.email || '',
+      photoURL: user.photoURL || '',
+      authProvider: getAuthProvider(user),
+    },
+  };
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function getAuthProvider(user) {
+  const providerId = user?.providerData?.[0]?.providerId || '';
+
+  if (providerId === 'password') {
+    return 'password';
+  }
+
+  if (providerId === 'google.com') {
+    return 'google';
+  }
+
+  return providerId ? 'firebase' : 'password';
 }

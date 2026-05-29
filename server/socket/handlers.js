@@ -122,7 +122,7 @@ export function createSocketHandlers(
 
         if (decodedToken?.uid) {
           guest.userId = decodedToken.uid;
-          guest.authProvider = 'google';
+          guest.authProvider = getFirebaseProvider(decodedToken);
           guest.email = decodedToken.email || '';
           entitlementService?.rememberVerifiedIdentity?.(guest);
         }
@@ -146,7 +146,7 @@ export function createSocketHandlers(
           rawMessage === 'Nexus Chat is in maintenance mode. Please try again soon.' ||
           rawMessage === 'Guest chat is paused right now. Login entry may return when launch mode allows it.'
             ? rawMessage
-            : 'Google session could not be verified. Continue as a guest or sign in again.';
+            : 'Account session could not be verified. Continue as a guest or sign in again.';
         logger.warn?.('Socket profile handshake rejected.', {
           socketId: socket.id,
           reason: rawMessage || 'unknown',
@@ -1189,6 +1189,20 @@ function sanitizeGuestProfile(profile) {
     handle: safeHandle(profile?.handle),
     status: sanitizeProfileStatus(profile?.status || profile?.bio || ''),
   };
+}
+
+function getFirebaseProvider(decodedToken = {}) {
+  const provider = decodedToken.firebase?.sign_in_provider || '';
+
+  if (provider === 'password') {
+    return 'password';
+  }
+
+  if (provider === 'google.com') {
+    return 'google';
+  }
+
+  return provider ? 'firebase' : 'password';
 }
 
 function safeHandle(value) {

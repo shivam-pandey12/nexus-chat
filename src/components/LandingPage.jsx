@@ -211,7 +211,7 @@ export default function LandingPage({ onStart, onExplore, onCreatePrivate, onNav
 
 function getValueCopy(value) {
   const copy = {
-    'Fast rooms': 'Create or join a room with a guest profile or optional Google login.',
+    'Fast rooms': 'Create or join a room with a guest profile or optional account login.',
     'Temporary, public, or private access': 'Choose the access model that fits the conversation without changing the chat flow.',
     'Moderation and safety by default': 'Reports, blocks, owner controls, and admin review stay available without cluttering normal chat.',
     'Profiles and room memory': 'Logged-in users can keep profile polish, favorites, and room history benefits.',

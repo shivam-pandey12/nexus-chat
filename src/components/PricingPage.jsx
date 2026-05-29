@@ -71,7 +71,7 @@ export default function PricingPage({ billingStatus, billingSummary, isLoggedIn,
         <div className="faq-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {[
             ['Is basic chat free?', 'Yes. Joining public rooms, basic messages, replies, reactions, reporting, blocking, and safety tools stay free.'],
-            ['Do I need login?', 'Only purchases and saved billing access require Google login. Guest chat remains first-class.'],
+            ['Do I need login?', 'Only purchases and saved billing access require account login. Guest chat remains first-class.'],
             ['What do premium themes unlock?', 'Premium themes add owned visual room styles and profile cosmetics without changing message readability.'],
             ['Can I cancel?', 'This MVP stores period entitlements. Full subscription lifecycle and cancellation automation are a production hardening step.'],
             ['Is safety paid?', 'No. Reporting, blocking, and basic owner moderation are never paywalled.'],

@@ -1408,9 +1408,23 @@ function toVerifiedUser(decoded, sessionId = '') {
     sessionId: sessionId || `user_${decoded.uid}`,
     displayName: decoded.name || decoded.displayName || 'NexusUser',
     avatar: 'nexus',
-    authProvider: 'google',
+    authProvider: getFirebaseProvider(decoded),
     email: decoded.email || '',
   };
+}
+
+function getFirebaseProvider(decoded = {}) {
+  const provider = decoded.firebase?.sign_in_provider || '';
+
+  if (provider === 'password') {
+    return 'password';
+  }
+
+  if (provider === 'google.com') {
+    return 'google';
+  }
+
+  return provider ? 'firebase' : 'password';
 }
 
 function getAdminEmails() {

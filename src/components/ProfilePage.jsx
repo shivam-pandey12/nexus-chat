@@ -126,9 +126,9 @@ export default function ProfilePage({
           <div>
             <p className={cn('eyebrow', tw.eyebrow)}>Nexus identity</p>
             <h1 className="text-4xl font-black tracking-normal text-[var(--text)] sm:text-5xl">{displayName || 'Your Nexus profile'}</h1>
-            <p className={tw.subcopy}>{isLoggedIn ? 'Synced with your Google-backed MH Horizon chat profile.' : 'A polished guest identity for this browser.'}</p>
+            <p className={tw.subcopy}>{isLoggedIn ? 'Synced with your MH Horizon chat account.' : 'A polished guest identity for this browser.'}</p>
             <div className="profile-hero__chips">
-              <span className="pill">{isLoggedIn ? 'Google account' : 'Guest mode'}</span>
+              <span className="pill">{isLoggedIn ? 'Account' : 'Guest mode'}</span>
               <span className="pill pill--muted">{billingSummary?.planTier ? `Nexus ${billingSummary.planTier}` : 'Free access'}</span>
               {handle && <span className="pill pill--muted">@{handle}</span>}
             </div>
@@ -146,7 +146,7 @@ export default function ProfilePage({
           ) : (
             <button className={cn('button button--primary profile-auth-button', tw.buttonPrimary)} type="button" onClick={onLogin}>
               <Icon name="login" size={18} />
-              Login with Google
+              Login / Sign up
             </button>
           )}
         </div>
@@ -186,7 +186,7 @@ export default function ProfilePage({
             <div>
               <p className="eyebrow">Profile image</p>
               <h2>Choose your room portrait</h2>
-              <p className="muted">Google photo can travel into room cards. Nexus avatars stay available whenever you want a quieter identity.</p>
+              <p className="muted">Account photos can travel into room cards. Nexus avatars stay available whenever you want a quieter identity.</p>
             </div>
             <div className="profile-image-options grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Choose profile image">
               {activeProfile?.googlePhotoURL && (
@@ -199,7 +199,7 @@ export default function ProfilePage({
                 >
                   <AvatarBadge avatarId={avatar} photoURL={activeProfile.googlePhotoURL} size="md" />
                   <span>
-                    <strong>Google photo</strong>
+                    <strong>Account photo</strong>
                     <em>Account portrait</em>
                   </span>
                 </button>
@@ -375,7 +375,7 @@ export default function ProfilePage({
                 </label>
               ))}
             </div>
-            {!isLoggedIn && <p className="muted">Guest preferences stay local to this browser. Durable push requires Google login.</p>}
+            {!isLoggedIn && <p className="muted">Guest preferences stay local to this browser. Durable push requires account login.</p>}
           </section>
 
           <section className={cn('panel settings-card pwa-settings-card', tw.glassSoft, 'p-5')}>
@@ -420,7 +420,7 @@ export default function ProfilePage({
             <section className={cn('panel settings-card profile-login-hint', tw.glassSoft, 'p-5')}>
               <p className="eyebrow">Account benefits</p>
               <h2>Login saves this identity</h2>
-              <p className="muted">Guest mode stays free. Google login keeps profile polish, favorites, rooms, and billing entitlements across devices.</p>
+              <p className="muted">Guest mode stays free. Account login keeps profile polish, favorites, rooms, and billing entitlements across devices.</p>
             </section>
           )}
         </aside>
@@ -451,7 +451,7 @@ function getPushStatusTitle(pushState = {}, pwaStatus = {}) {
 
 function getPushStatusBody(pushState = {}, pwaStatus = {}, isLoggedIn = false) {
   if (!isLoggedIn) {
-    return 'Login with Google to register a browser/device token.';
+    return 'Login to register a browser/device token.';
   }
 
   if (pushState.tokenRegistered) {

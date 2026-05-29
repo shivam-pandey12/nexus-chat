@@ -12,7 +12,7 @@ const PAGE_COPY = {
     intro:
       'This plain-language draft explains how Nexus Chat expects to handle account, guest, room, moderation, and billing data. Owner/legal review is required before public launch.',
     sections: [
-      ['Account and guest data', 'Google login profiles, guest session IDs, display names, avatars, and local preferences may be used to keep chat identity and room history working.'],
+      ['Account and guest data', 'Google/email login profiles, guest session IDs, display names, avatars, and local preferences may be used to keep chat identity and room history working.'],
       ['Rooms and messages', 'Rooms, messages, replies, reactions, reports, moderation logs, announcements, and notifications may be stored when persistence is enabled.'],
       ['Push notifications', 'If enabled by the owner and accepted by you, Nexus may store Firebase Cloud Messaging browser tokens under your account so mentions, replies, announcements, event reminders, safety updates, and billing notices can reach your device. You can disable push in profile settings.'],
       ['Billing records', 'Razorpay payment status, entitlements, product IDs, and safe billing metadata are stored by the backend. Raw secrets and private keys are never shown in the app UI.'],
