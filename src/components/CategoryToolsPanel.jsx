@@ -224,41 +224,12 @@ export default function CategoryToolsPanel({
         )}
 
         {isToolEnabledForCategory('topic_spinner', category.slug) && (
-          <TopicPollTool
+          <TopicTool
             topics={STATIC_TOPIC_PROMPTS}
-            polls={activeTools.filter((tool) => tool.toolType === 'quick_poll')}
-            drafts={drafts}
-            updateDraft={updateDraft}
             onTopic={(topic) => {
               createTool('topic_spinner', { title: 'Topic card', body: topic, metadata: { topic } }, 'Topic posted');
               onSendCardMessage?.('topic_card', topic, { topic }, 'topic_spinner');
             }}
-            onPoll={() => {
-              const options = [drafts.pollA, drafts.pollB, drafts.pollC, drafts.pollD].filter(Boolean);
-              const question = drafts.pollQuestion;
-              createTool(
-                'quick_poll',
-                { title: question, metadata: { options } },
-                'Poll posted in chat',
-                (response) => {
-                  const tool = response?.tool;
-                  const safeOptions = tool?.metadata?.options?.length ? tool.metadata.options : options;
-                  onSendCardMessage?.(
-                    'poll_card',
-                    question,
-                    {
-                      question,
-                      options: safeOptions,
-                      results: tool?.metadata?.results || safeOptions.map(() => 0),
-                    },
-                    'quick_poll',
-                    tool?.toolId || '',
-                  );
-                  ['pollQuestion', 'pollA', 'pollB', 'pollC', 'pollD'].forEach((key) => updateDraft(key, ''));
-                },
-              );
-            }}
-            onVote={(toolId, optionIndex) => onToolAction?.('categoryTool:pollVote', { toolId, optionIndex }, { success: 'Vote counted' })}
           />
         )}
 
@@ -300,6 +271,7 @@ export function CategoryQuickTools({
   onInsertComposerText,
   onSendTopic,
   onOpenPoll,
+  onOpenEvent,
 }) {
   const category = getCategoryConfig(room?.categorySlug || room?.category);
   const risk = category.slug === 'coding' ? detectCodingSecretRisk(draft || '') : { risky: false };
@@ -325,6 +297,11 @@ export function CategoryQuickTools({
       {isToolEnabledForCategory('quick_poll', category.slug) && (
         <button className="tool-chip inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-inset)] px-3 py-2 text-xs font-black transition-all hover:-translate-y-0.5" type="button" onClick={onOpenPoll}>
           <Icon name="shuffle" size={15} /> Poll
+        </button>
+      )}
+      {isToolEnabledForCategory('room_event', category.slug) && (
+        <button className="tool-chip inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-inset)] px-3 py-2 text-xs font-black transition-all hover:-translate-y-0.5" type="button" onClick={onOpenEvent}>
+          <Icon name="calendar" size={15} /> Event
         </button>
       )}
       {isToolEnabledForCategory('match_invite', category.slug) && (
@@ -472,24 +449,15 @@ function QueueTool({ items, canModerate, currentSessionId, draft, urgent, onDraf
   );
 }
 
-function TopicPollTool({ topics, polls, drafts, updateDraft, onTopic, onPoll, onVote }) {
+function TopicTool({ topics, onTopic }) {
   const topic = topics[Math.floor(Math.random() * topics.length)];
   return (
     <article className={cn('category-tool-card', tw.cardCompact)}>
-      <ToolTitle icon="shuffle" title="Topic and poll" description="Casual prompts and simple live polls." />
+      <ToolTitle icon="shuffle" title="Topic spinner" description="Post a safe casual prompt into chat." />
       <button className="button button--ghost button--wide" type="button" onClick={() => onTopic(topic)}>
         Spin topic
       </button>
-      <ToolList items={polls} onAction={(tool) => onVote(tool.toolId, 0)} actionLabel="Vote first" />
-      <div className="tool-form-grid">
-        <input className={cn('premium-input', tw.input)} placeholder="Poll question" value={drafts.pollQuestion || ''} onChange={(event) => updateDraft('pollQuestion', event.target.value)} />
-        {['pollA', 'pollB', 'pollC', 'pollD'].map((key, index) => (
-          <input key={key} className={cn('premium-input', tw.input)} placeholder={`Option ${index + 1}`} value={drafts[key] || ''} onChange={(event) => updateDraft(key, event.target.value)} />
-        ))}
-        <button className="button button--soft" type="button" onClick={onPoll} disabled={!drafts.pollQuestion || !drafts.pollA || !drafts.pollB}>
-          Create poll
-        </button>
-      </div>
+      <p className="tool-safety-note">Polls now open from the chat composer so voting happens directly in the message stream.</p>
     </article>
   );
 }

@@ -74,6 +74,19 @@ const ICON_PATHS = {
       <path d="M11 18h2" />
     </>
   ),
+  calendar: (
+    <>
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <rect x="3" y="4" width="18" height="18" rx="3" />
+      <path d="M3 10h18" />
+      <path d="M8 14h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 14h.01" />
+      <path d="M8 18h.01" />
+      <path d="M12 18h.01" />
+    </>
+  ),
   pricing: (
     <>
       <path d="M20 13.5V7a2 2 0 0 0-2-2h-6.5L4 12.5a2 2 0 0 0 0 2.8l4.7 4.7a2 2 0 0 0 2.8 0Z" />

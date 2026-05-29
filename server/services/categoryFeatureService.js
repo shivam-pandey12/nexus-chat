@@ -46,6 +46,7 @@ const USER_CREATABLE_TOOLS = new Set([
   'topic_spinner',
   'icebreaker_prompt',
   'quick_poll',
+  'room_event',
   'product_feedback',
 ]);
 
@@ -275,6 +276,19 @@ export function createCategoryFeatureService({ repositories = {}, entitlementSer
     const value = String(cleanPayload.value || 'up').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'up';
     const nextVotes = { ...(tool.metadata?.votes || {}) };
     nextVotes[voteKey] = value;
+
+    if (tool.toolType === 'room_event') {
+      const status = ['going', 'maybe', 'not_going'].includes(value) ? value : 'going';
+      const rsvps = { ...(tool.metadata?.rsvps || {}), [voteKey]: status };
+      const rsvpSummary = summarizeEventRsvps(rsvps);
+      const next = {
+        ...tool,
+        updatedAt: new Date().toISOString(),
+        metadata: { ...(tool.metadata || {}), rsvps, rsvpSummary },
+      };
+      upsertTool(room, next);
+      return { room, tool: next, tools: getTools(room.roomId), action: 'event_rsvp' };
+    }
 
     const next = {
       ...tool,
@@ -635,6 +649,18 @@ function sanitizeToolMetadata(toolType, source = {}) {
     return { ...metadata, priority: sanitizePriorityTag(source.priority) };
   }
 
+  if (toolType === 'room_event') {
+    return {
+      ...metadata,
+      title: sanitizeCategoryToolTitle(source.title || source.eventTitle, 'Room event'),
+      description: sanitizeCategoryToolBody(source.description || source.body || ''),
+      startsAt: sanitizeRoomEventTime(source.startsAt || source.startTime),
+      location: sanitizeCategoryToolTitle(source.location || '', ''),
+      rsvps: {},
+      rsvpSummary: { going: 0, maybe: 0, notGoing: 0 },
+    };
+  }
+
   if (toolType === 'topic_spinner' || toolType === 'icebreaker_prompt') {
     const topic = sanitizeCategoryToolBody(source.topic || source.body || STATIC_TOPIC_PROMPTS[Math.floor(Math.random() * STATIC_TOPIC_PROMPTS.length)]);
     return { ...metadata, topic };
@@ -668,7 +694,34 @@ function serializePublicTool(tool = {}) {
   delete serialized.metadata.votes;
   delete serialized.metadata.participants;
   delete serialized.metadata.voters;
+  delete serialized.metadata.rsvps;
   return serialized;
+}
+
+function summarizeEventRsvps(rsvps = {}) {
+  return Object.values(rsvps).reduce(
+    (summary, value) => {
+      if (value === 'going') {
+        summary.going += 1;
+      } else if (value === 'maybe') {
+        summary.maybe += 1;
+      } else if (value === 'not_going') {
+        summary.notGoing += 1;
+      }
+      return summary;
+    },
+    { going: 0, maybe: 0, notGoing: 0 },
+  );
+}
+
+function sanitizeRoomEventTime(value) {
+  const timestamp = new Date(value || '').getTime();
+
+  if (!Number.isFinite(timestamp)) {
+    throw new Error('Event start time is invalid.');
+  }
+
+  return new Date(timestamp).toISOString();
 }
 
 function CATEGORY_TOOL_TYPES_SAFE(toolType) {

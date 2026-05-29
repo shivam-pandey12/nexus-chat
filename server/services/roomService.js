@@ -1899,6 +1899,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
     delete sanitized.votes;
     delete sanitized.participants;
     delete sanitized.voters;
+    delete sanitized.rsvps;
     return sanitized;
   }
 

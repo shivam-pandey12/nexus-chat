@@ -67,6 +67,8 @@ export default function ChatRoom({
   const [secretWarningAccepted, setSecretWarningAccepted] = useState(false);
   const [pollComposerOpen, setPollComposerOpen] = useState(false);
   const [pollDraft, setPollDraft] = useState(() => emptyPollDraft());
+  const [eventComposerOpen, setEventComposerOpen] = useState(false);
+  const [eventDraft, setEventDraft] = useState(() => emptyEventDraft());
   const [profileTarget, setProfileTarget] = useState(null);
   const [profilePreview, setProfilePreview] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -202,6 +204,10 @@ export default function ChatRoom({
     setPollDraft((current) => ({ ...current, [key]: value }));
   }
 
+  function updateEventDraft(key, value) {
+    setEventDraft((current) => ({ ...current, [key]: value }));
+  }
+
   function submitPollFromComposer() {
     const question = pollDraft.question.trim();
     const options = [pollDraft.optionA, pollDraft.optionB, pollDraft.optionC, pollDraft.optionD]
@@ -238,6 +244,43 @@ export default function ChatRoom({
           );
           setPollDraft(emptyPollDraft());
           setPollComposerOpen(false);
+        },
+      },
+    );
+  }
+
+  function submitEventFromComposer() {
+    const title = eventDraft.title.trim();
+    const startsAt = eventDraft.startsAt.trim();
+    const description = eventDraft.description.trim();
+    const location = eventDraft.location.trim();
+
+    if (!title || !startsAt) {
+      onToast?.('Events need a title and start time.', 'error');
+      return;
+    }
+
+    onCategoryToolAction?.(
+      'categoryTool:create',
+      {
+        toolType: 'room_event',
+        title,
+        body: description,
+        metadata: {
+          title,
+          description,
+          startsAt,
+          location,
+        },
+      },
+      {
+        success: 'Event posted in chat',
+        onSuccess: (response) => {
+          const tool = response?.tool;
+          const metadata = tool?.metadata || { title, description, startsAt, location };
+          onSendCardMessage?.('event_card', title, metadata, 'room_event', tool?.toolId || '');
+          setEventDraft(emptyEventDraft());
+          setEventComposerOpen(false);
         },
       },
     );
@@ -478,6 +521,9 @@ export default function ChatRoom({
                   onPollVote={(toolId, optionIndex) =>
                     onCategoryToolAction?.('categoryTool:pollVote', { toolId, optionIndex }, { success: 'Vote counted' })
                   }
+                  onEventRsvp={(toolId, value) =>
+                    onCategoryToolAction?.('categoryTool:vote', { toolId, value }, { success: 'RSVP updated' })
+                  }
                   onCategoryMessageAction={(toolType, label) => handleCategoryMessageAction(message, toolType, label)}
                 />
               );
@@ -513,6 +559,7 @@ export default function ChatRoom({
             onInsertComposerText={insertComposerText}
             onSendTopic={sendRandomTopic}
             onOpenPoll={() => setPollComposerOpen((current) => !current)}
+            onOpenEvent={() => setEventComposerOpen((current) => !current)}
           />
           {pollComposerOpen && isToolEnabledForCategory('quick_poll', roomCategory.slug) && (
             <div className={cn('composer-poll-card', tw.cardCompact)}>
@@ -544,6 +591,28 @@ export default function ChatRoom({
               <button className={cn('button button--ghost button--small', tw.buttonGhost, 'min-h-9 px-4 py-2')} type="button" onClick={() => setSecretWarningAccepted(true)}>
                 I reviewed it
               </button>
+            </div>
+          )}
+          {eventComposerOpen && isToolEnabledForCategory('room_event', roomCategory.slug) && (
+            <div className={cn('composer-event-card', tw.cardCompact)}>
+              <div className="composer-poll-card__head">
+                <div>
+                  <strong>Create event</strong>
+                  <span>Post an RSVP invite directly into this room.</span>
+                </div>
+                <button className="icon-button" type="button" onClick={() => setEventComposerOpen(false)} aria-label="Close event composer">
+                  <Icon name="close" size={16} />
+                </button>
+              </div>
+              <div className="composer-event-grid">
+                <input className={cn('premium-input', tw.input)} placeholder="Event title" value={eventDraft.title} onChange={(event) => updateEventDraft('title', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} type="datetime-local" value={eventDraft.startsAt} onChange={(event) => updateEventDraft('startsAt', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} placeholder="Location or room note optional" value={eventDraft.location} onChange={(event) => updateEventDraft('location', event.target.value)} />
+                <textarea className={cn('premium-input', tw.input)} placeholder="Description optional" value={eventDraft.description} onChange={(event) => updateEventDraft('description', event.target.value)} />
+                <button className={cn('button button--soft composer-event-card__post', tw.buttonSoft)} type="button" onClick={submitEventFromComposer}>
+                  Post event
+                </button>
+              </div>
             </div>
           )}
           <div className="composer__input-wrap relative">
@@ -931,6 +1000,15 @@ function emptyPollDraft() {
   };
 }
 
+function emptyEventDraft() {
+  return {
+    title: '',
+    startsAt: '',
+    location: '',
+    description: '',
+  };
+}
+
 function MessageBubble({
   message,
   isMine,
@@ -949,6 +1027,7 @@ function MessageBubble({
   roomCategory,
   categoryTools,
   onPollVote,
+  onEventRsvp,
   onCategoryMessageAction,
 }) {
   const time = new Intl.DateTimeFormat([], {
@@ -986,7 +1065,7 @@ function MessageBubble({
           </button>
         )}
 
-        <MessageContent message={message} isDeleted={isDeleted} categoryTools={categoryTools} onPollVote={onPollVote} />
+        <MessageContent message={message} isDeleted={isDeleted} categoryTools={categoryTools} onPollVote={onPollVote} onEventRsvp={onEventRsvp} />
 
         {message.categoryMarkers?.length > 0 && (
           <div className="message-marker-row">
@@ -1085,7 +1164,7 @@ function MessageBubble({
   );
 }
 
-function MessageContent({ message, isDeleted, categoryTools = [], onPollVote }) {
+function MessageContent({ message, isDeleted, categoryTools = [], onPollVote, onEventRsvp }) {
   if (isDeleted) {
     return <p className="message__content">Message deleted</p>;
   }
@@ -1104,8 +1183,8 @@ function MessageContent({ message, isDeleted, categoryTools = [], onPollVote }) 
     );
   }
 
-  if (['match_invite', 'score_card', 'topic_card', 'poll_card'].includes(message.messageType)) {
-    return <SpecialMessageCard message={message} categoryTools={categoryTools} onPollVote={onPollVote} />;
+  if (['match_invite', 'score_card', 'topic_card', 'poll_card', 'event_card'].includes(message.messageType)) {
+    return <SpecialMessageCard message={message} categoryTools={categoryTools} onPollVote={onPollVote} onEventRsvp={onEventRsvp} />;
   }
 
   return (
@@ -1115,11 +1194,13 @@ function MessageContent({ message, isDeleted, categoryTools = [], onPollVote }) 
   );
 }
 
-function SpecialMessageCard({ message, categoryTools = [], onPollVote }) {
+function SpecialMessageCard({ message, categoryTools = [], onPollVote, onEventRsvp }) {
   const linkedTool = categoryTools.find((tool) => tool.toolId && tool.toolId === message.categoryToolId) || null;
   const pollOptions = linkedTool?.metadata?.options?.length ? linkedTool.metadata.options : message.metadata?.options || [];
   const pollResults = linkedTool?.metadata?.results?.length ? linkedTool.metadata.results : message.metadata?.results || [];
   const pollTotal = pollResults.reduce((sum, count) => sum + Number(count || 0), 0);
+  const eventMetadata = message.messageType === 'event_card' ? { ...(message.metadata || {}), ...(linkedTool?.metadata || {}) } : {};
+  const eventSummary = eventMetadata.rsvpSummary || {};
   const card = {
     match_invite: {
       icon: 'gamepad',
@@ -1140,6 +1221,11 @@ function SpecialMessageCard({ message, categoryTools = [], onPollVote }) {
       icon: 'shuffle',
       title: linkedTool?.title || message.metadata?.question || 'Poll',
       label: 'Live poll',
+    },
+    event_card: {
+      icon: 'calendar',
+      title: linkedTool?.title || eventMetadata.title || message.content || 'Room event',
+      label: 'RSVP event',
     },
   }[message.messageType] || { icon: 'sparkle', title: 'Room card', label: 'Category tool' };
 
@@ -1170,6 +1256,34 @@ function SpecialMessageCard({ message, categoryTools = [], onPollVote }) {
             );
           })}
           <small>{pollTotal ? `${pollTotal} total vote${pollTotal === 1 ? '' : 's'}` : 'No votes yet. Tap an option to vote.'}</small>
+        </div>
+      ) : message.messageType === 'event_card' ? (
+        <div className="message-card__event">
+          {eventMetadata.description && <p>{eventMetadata.description}</p>}
+          <dl>
+            <div>
+              <dt>When</dt>
+              <dd>{formatDateTime(eventMetadata.startsAt)}</dd>
+            </div>
+            {eventMetadata.location && (
+              <div>
+                <dt>Where</dt>
+                <dd>{eventMetadata.location}</dd>
+              </div>
+            )}
+          </dl>
+          <div className="message-card__event-actions">
+            {[
+              ['going', 'Going', eventSummary.going || 0],
+              ['maybe', 'Maybe', eventSummary.maybe || 0],
+              ['not_going', "Can't go", eventSummary.notGoing || 0],
+            ].map(([value, label, count]) => (
+              <button key={value} type="button" onClick={() => linkedTool?.toolId && onEventRsvp?.(linkedTool.toolId, value)} disabled={!linkedTool?.toolId}>
+                <strong>{label}</strong>
+                <span>{count}</span>
+              </button>
+            ))}
+          </div>
         </div>
       ) : Array.isArray(message.metadata?.options) && (
         <div className="message-card__options">
