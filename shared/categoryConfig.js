@@ -121,26 +121,26 @@ export const STATIC_TOPIC_PROMPTS = [
 const CATEGORY_TOOL_ASSIGNMENTS = {
   study: {
     featureModules: ['study_focus', 'study_doubts'],
-    enabledTools: ['focus_timer', 'study_goal', 'doubt_marker', 'study_checklist', 'room_event'],
-    roomToolbarItems: ['focus_timer', 'study_goal', 'doubt_marker', 'room_event'],
+    enabledTools: ['focus_timer', 'study_goal', 'doubt_marker', 'study_checklist', 'quick_poll', 'room_event'],
+    roomToolbarItems: ['focus_timer', 'study_goal', 'doubt_marker', 'quick_poll', 'room_event'],
     roomInfoSections: ['focus_timer', 'study_goal', 'doubt_marker', 'study_checklist'],
   },
   coding: {
     featureModules: ['coding_snippets', 'coding_safety'],
-    enabledTools: ['code_snippet_mode', 'bug_report_template', 'secret_warning', 'fix_solved_marker', 'room_event'],
-    roomToolbarItems: ['code_snippet_mode', 'bug_report_template', 'fix_solved_marker', 'room_event'],
+    enabledTools: ['code_snippet_mode', 'bug_report_template', 'secret_warning', 'fix_solved_marker', 'quick_poll', 'room_event'],
+    roomToolbarItems: ['code_snippet_mode', 'bug_report_template', 'fix_solved_marker', 'quick_poll', 'room_event'],
     roomInfoSections: ['secret_warning', 'fix_solved_marker'],
   },
   gaming: {
     featureModules: ['gaming_match'],
-    enabledTools: ['match_lobby', 'match_invite', 'score_post', 'room_event'],
-    roomToolbarItems: ['match_lobby', 'match_invite', 'score_post', 'room_event'],
+    enabledTools: ['match_lobby', 'match_invite', 'score_post', 'quick_poll', 'room_event'],
+    roomToolbarItems: ['match_lobby', 'match_invite', 'score_post', 'quick_poll', 'room_event'],
     roomInfoSections: ['match_lobby'],
   },
   creative: {
     featureModules: ['creative_board'],
-    enabledTools: ['idea_board', 'prompt_card', 'feedback_request', 'draft_pin', 'room_event'],
-    roomToolbarItems: ['idea_board', 'prompt_card', 'feedback_request', 'room_event'],
+    enabledTools: ['idea_board', 'prompt_card', 'feedback_request', 'draft_pin', 'quick_poll', 'room_event'],
+    roomToolbarItems: ['idea_board', 'prompt_card', 'feedback_request', 'quick_poll', 'room_event'],
     roomInfoSections: ['idea_board', 'prompt_card', 'draft_pin'],
   },
   random: {
@@ -151,14 +151,14 @@ const CATEGORY_TOOL_ASSIGNMENTS = {
   },
   help: {
     featureModules: ['help_queue'],
-    enabledTools: ['help_queue', 'solved_marker', 'support_status', 'priority_tag', 'room_event'],
-    roomToolbarItems: ['help_queue', 'priority_tag', 'solved_marker', 'room_event'],
+    enabledTools: ['help_queue', 'solved_marker', 'support_status', 'priority_tag', 'quick_poll', 'room_event'],
+    roomToolbarItems: ['help_queue', 'priority_tag', 'solved_marker', 'quick_poll', 'room_event'],
     roomInfoSections: ['help_queue', 'support_status'],
   },
   'mh-horizon': {
     featureModules: ['mh_official'],
-    enabledTools: ['official_badge', 'hub_link_panel', 'product_feedback', 'official_announcement', 'room_event'],
-    roomToolbarItems: ['hub_link_panel', 'product_feedback', 'official_announcement', 'room_event'],
+    enabledTools: ['official_badge', 'hub_link_panel', 'product_feedback', 'official_announcement', 'quick_poll', 'room_event'],
+    roomToolbarItems: ['hub_link_panel', 'product_feedback', 'official_announcement', 'quick_poll', 'room_event'],
     roomInfoSections: ['official_badge', 'hub_link_panel', 'product_feedback'],
   },
 };
