@@ -829,11 +829,28 @@ app.get('/api/admin/errors', requireAdminAccess, (_request, response) => {
 });
 
 app.get('/api/admin/overview', requireAdminAccess, async (request, response) => {
-  const userStats = await persistenceService.repositories.userRepository.listStats?.();
-  const notifications = await notificationService.getAdminSummary();
-  const feedback = await feedbackService.getAdminSummary();
-  const categoryTools = await categoryFeatureService.listAdmin({ limit: 60 });
-  const push = await pushService.getAdminSummary();
+  const [userStatsResult, notificationsResult, feedbackResult, categoryToolsResult, pushResult] = await Promise.allSettled([
+    persistenceService.repositories.userRepository.listStats?.(),
+    notificationService.getAdminSummary(),
+    feedbackService.getAdminSummary(),
+    categoryFeatureService.listAdmin({ limit: 60 }),
+    pushService.getAdminSummary(),
+  ]);
+  const readAdminSection = (result, fallback, section) => {
+    if (result.status === 'fulfilled') {
+      return result.value ?? fallback;
+    }
+    logger.warn?.('Admin overview section failed safely.', {
+      section,
+      error: result.reason instanceof Error ? result.reason.message : 'unknown_error',
+    });
+    return fallback;
+  };
+  const userStats = readAdminSection(userStatsResult, { totalUsers: 0, loggedInUsers: 0, guestUsers: 0 }, 'users');
+  const notifications = readAdminSection(notificationsResult, {}, 'notifications');
+  const feedback = readAdminSection(feedbackResult, {}, 'feedback');
+  const categoryTools = readAdminSection(categoryToolsResult, [], 'categoryTools');
+  const push = readAdminSection(pushResult, {}, 'push');
   const persistence = persistenceService.getStatus();
   response.json({
     ...roomService.getAdminOverview(),
@@ -843,7 +860,7 @@ app.get('/api/admin/overview', requireAdminAccess, async (request, response) => 
     persistenceEnabled: persistence.enabled,
     persistenceProvider: persistence.provider,
     dbStatus: persistence.state,
-    users: userStats || { totalUsers: 0, loggedInUsers: 0, guestUsers: 0 },
+    users: userStats,
     notifications,
     push,
     feedback,
@@ -853,7 +870,6 @@ app.get('/api/admin/overview', requireAdminAccess, async (request, response) => 
     redis: cacheService.getStatus(),
     jobs: jobService?.getStatus?.() || { enabled: false },
     analytics: analyticsService.getStatus(),
-    push,
     env: safeEnvSummary(),
     launch: toPublicLaunchStatus(),
   });

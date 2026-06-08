@@ -474,10 +474,19 @@ async function requestJson(path, options = {}, extraHeaders = {}) {
       ...(options.headers || {}),
     },
   });
-  const data = await response.json().catch(() => ({}));
+  const rawBody = await response.text().catch(() => '');
+  let data = {};
+
+  if (rawBody) {
+    try {
+      data = JSON.parse(rawBody);
+    } catch {
+      data = { error: rawBody.slice(0, 180) };
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Request failed.');
+    throw new Error(data.error || `Request failed (${response.status}).`);
   }
 
   return data;

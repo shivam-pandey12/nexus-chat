@@ -108,8 +108,10 @@ export default function AdminPanel({ authToken = '', sessionId = '', onBack, onT
 
     try {
       const auth = getAdminAuth(key);
-      const [data, billingData, communitiesData, eventsData, scheduledData, systemData, analyticsData, errorsData, feedbackData, categoryToolsData] = await Promise.all([
-        fetchAdminOverview(auth),
+      const data = await fetchAdminOverview(auth);
+      setOverview(data);
+
+      const optionalResults = await Promise.allSettled([
         fetchAdminBilling(auth),
         fetchAdminCommunities(auth),
         fetchAdminEvents(auth),
@@ -120,20 +122,29 @@ export default function AdminPanel({ authToken = '', sessionId = '', onBack, onT
         fetchAdminFeedback(auth, { limit: 80 }),
         fetchAdminCategoryTools(auth, { limit: 80 }),
       ]);
-      setOverview(data);
+      const [billingData, communitiesData, eventsData, scheduledData, systemData, analyticsData, errorsData, feedbackData, categoryToolsData] = optionalResults.map((result) => (
+        result.status === 'fulfilled' ? result.value : null
+      ));
+      const failedSections = optionalResults
+        .filter((result) => result.status === 'rejected')
+        .map((result) => result.reason?.message || 'Admin section failed.');
+
       setBilling(billingData);
       setCommunityOps({
-        communities: communitiesData.communities || [],
-        events: eventsData.events || [],
-        scheduledAnnouncements: scheduledData.scheduledAnnouncements || [],
-        activity: communitiesData.activity || [],
+        communities: communitiesData?.communities || [],
+        events: eventsData?.events || [],
+        scheduledAnnouncements: scheduledData?.scheduledAnnouncements || [],
+        activity: communitiesData?.activity || [],
       });
       setSystemStatus(systemData);
       setAnalytics(analyticsData);
-      setRecentErrors(errorsData.errors || []);
-      setAdminFeedback(feedbackData.feedback || []);
-      setCategoryTools(categoryToolsData.tools || data.categoryTools || []);
+      setRecentErrors(errorsData?.errors || []);
+      setAdminFeedback(feedbackData?.feedback || []);
+      setCategoryTools(categoryToolsData?.tools || data.categoryTools || []);
       sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+      if (failedSections.length) {
+        onToast?.(`Admin opened, but ${failedSections.length} section${failedSections.length > 1 ? 's' : ''} could not load.`, 'warning');
+      }
     } catch (requestError) {
       setOverview(null);
       setBilling(null);
@@ -152,8 +163,11 @@ export default function AdminPanel({ authToken = '', sessionId = '', onBack, onT
   function handleUnlock(event) {
     event.preventDefault();
     const nextKey = draftKey.trim();
+    if (nextKey === adminKey) {
+      loadOverview(nextKey);
+      return;
+    }
     setAdminKey(nextKey);
-    loadOverview(nextKey);
   }
 
   async function handleReportStatus(reportId, status) {
