@@ -798,21 +798,21 @@ function createEventRepository(db) {
     },
 
     async listByCommunity(communityId, limit = CHAT_LIMITS.MAX_EVENTS_LOAD) {
+      const boundedLimit = Math.min(Number(limit) || CHAT_LIMITS.MAX_EVENTS_LOAD, CHAT_LIMITS.MAX_EVENTS_LOAD);
       const snapshot = await events
         .where('communityId', '==', communityId)
-        .orderBy('startsAt', 'desc')
-        .limit(Math.min(limit, CHAT_LIMITS.MAX_EVENTS_LOAD))
+        .limit(Math.min(boundedLimit * 3, CHAT_LIMITS.MAX_EVENTS_LOAD))
         .get();
-      return snapshot.docs.map(readDoc);
+      return snapshot.docs.map(readDoc).sort(sortByIsoDesc('startsAt')).slice(0, boundedLimit);
     },
 
     async listByHost(hostUserId, limit = CHAT_LIMITS.MAX_EVENTS_LOAD) {
+      const boundedLimit = Math.min(Number(limit) || CHAT_LIMITS.MAX_EVENTS_LOAD, CHAT_LIMITS.MAX_EVENTS_LOAD);
       const snapshot = await events
         .where('hostUserId', '==', hostUserId)
-        .orderBy('startsAt', 'desc')
-        .limit(Math.min(limit, CHAT_LIMITS.MAX_EVENTS_LOAD))
+        .limit(Math.min(boundedLimit * 3, CHAT_LIMITS.MAX_EVENTS_LOAD))
         .get();
-      return snapshot.docs.map(readDoc);
+      return snapshot.docs.map(readDoc).sort(sortByIsoDesc('startsAt')).slice(0, boundedLimit);
     },
 
     async get(eventId) {
@@ -861,23 +861,32 @@ function createScheduledAnnouncementRepository(db) {
     },
 
     async listByCreator(userId, limit = CHAT_LIMITS.MAX_SCHEDULED_ANNOUNCEMENTS_LOAD) {
+      const boundedLimit = Math.min(
+        Number(limit) || CHAT_LIMITS.MAX_SCHEDULED_ANNOUNCEMENTS_LOAD,
+        CHAT_LIMITS.MAX_SCHEDULED_ANNOUNCEMENTS_LOAD,
+      );
       const snapshot = await scheduled
         .where('createdByUserId', '==', userId)
-        .orderBy('createdAt', 'desc')
-        .limit(Math.min(limit, CHAT_LIMITS.MAX_SCHEDULED_ANNOUNCEMENTS_LOAD))
+        .limit(Math.min(boundedLimit * 3, CHAT_LIMITS.MAX_SCHEDULED_ANNOUNCEMENTS_LOAD))
         .get();
-      return snapshot.docs.map(readDoc);
+      return snapshot.docs.map(readDoc).sort(sortByIsoDesc('createdAt')).slice(0, boundedLimit);
     },
 
     async listDue(nowIso, limit = CHAT_LIMITS.MAX_DUE_SCHEDULED_ANNOUNCEMENTS_PER_TICK) {
-      // TODO Phase 8 Firestore index: scheduledAnnouncements publishStatus + scheduledFor.
+      // Keep this single-field query so community jobs do not require a composite index on first launch.
+      const boundedLimit = Math.min(
+        Number(limit) || CHAT_LIMITS.MAX_DUE_SCHEDULED_ANNOUNCEMENTS_PER_TICK,
+        CHAT_LIMITS.MAX_DUE_SCHEDULED_ANNOUNCEMENTS_PER_TICK,
+      );
       const snapshot = await scheduled
-        .where('publishStatus', '==', 'scheduled')
         .where('scheduledFor', '<=', nowIso)
-        .orderBy('scheduledFor', 'asc')
-        .limit(Math.min(limit, CHAT_LIMITS.MAX_DUE_SCHEDULED_ANNOUNCEMENTS_PER_TICK))
+        .limit(Math.min(boundedLimit * 4, CHAT_LIMITS.MAX_DUE_SCHEDULED_ANNOUNCEMENTS_PER_TICK * 4))
         .get();
-      return snapshot.docs.map(readDoc);
+      return snapshot.docs
+        .map(readDoc)
+        .filter((announcement) => announcement.publishStatus === 'scheduled')
+        .sort(sortByIsoAsc('scheduledFor'))
+        .slice(0, boundedLimit);
     },
 
     async get(announcementId) {
@@ -1138,6 +1147,14 @@ function mergeCompatibilityDocs(canonicalSnapshot, legacySnapshot, limit) {
 
 function readDoc(document) {
   return { ...document.data(), documentId: document.id };
+}
+
+function sortByIsoAsc(field) {
+  return (first, second) => new Date(first?.[field] || 0).getTime() - new Date(second?.[field] || 0).getTime();
+}
+
+function sortByIsoDesc(field) {
+  return (first, second) => new Date(second?.[field] || 0).getTime() - new Date(first?.[field] || 0).getTime();
 }
 
 function toFirestoreValue(value) {
