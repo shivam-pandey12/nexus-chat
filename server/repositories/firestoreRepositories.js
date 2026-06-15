@@ -122,8 +122,8 @@ function createRoomRepository(db) {
     },
 
     async cleanupExpired(nowIso = new Date().toISOString()) {
-      // TODO Phase 5 Firestore index: rooms type + expiresAt for bounded temp cleanup.
-      const snapshot = await rooms.where('type', '==', 'temp').where('expiresAt', '<=', nowIso).limit(100).get();
+      // Single-field range query plus local filter keeps first-run projects from requiring a composite index.
+      const snapshot = await rooms.where('expiresAt', '<=', nowIso).limit(200).get();
 
       if (snapshot.empty) {
         return 0;
@@ -135,7 +135,7 @@ function createRoomRepository(db) {
       snapshot.docs.forEach((document) => {
         const room = readDoc(document);
 
-        if (!room.deletedAt) {
+        if (room.type === 'temp' && !room.deletedAt) {
           batch.set(document.ref, { deletedAt: nowIso, updatedAt: nowIso }, { merge: true });
           count += 1;
         }
@@ -168,10 +168,13 @@ function createMessageRepository(db) {
 
       const legacySnapshot = await legacyMessages
         .where('roomId', '==', roomId)
-        .orderBy('createdAt', 'desc')
         .limit(boundedLimit)
         .get();
-      return legacySnapshot.docs.map((document) => ({ ...readDoc(document), legacySource: true })).reverse();
+      return legacySnapshot.docs
+        .map((document) => ({ ...readDoc(document), legacySource: true }))
+        .sort(sortByIsoDesc('createdAt'))
+        .slice(0, boundedLimit)
+        .reverse();
     },
 
     async save(message) {
@@ -211,12 +214,12 @@ function createReportRepository(db) {
     },
 
     async listByRoom(roomId, limit = 50) {
+      const boundedLimit = Math.min(Number(limit) || 50, 50);
       const snapshot = await reports
         .where('roomId', '==', roomId)
-        .orderBy('createdAt', 'desc')
-        .limit(Math.min(limit, 50))
+        .limit(boundedLimit)
         .get();
-      return snapshot.docs.map(readDoc);
+      return snapshot.docs.map(readDoc).sort(sortByIsoDesc('createdAt')).slice(0, boundedLimit);
     },
 
     async create(report) {
@@ -570,13 +573,15 @@ function createPushTokenRepository(db) {
 function createAnnouncementRepository(db) {
   return {
     async listActive(roomId, limit = CHAT_LIMITS.MAX_ACTIVE_ANNOUNCEMENTS_PER_ROOM) {
-      // TODO Phase 7 Firestore index: room announcements active + createdAt desc.
+      const boundedLimit = Math.min(
+        Number(limit) || CHAT_LIMITS.MAX_ACTIVE_ANNOUNCEMENTS_PER_ROOM,
+        CHAT_LIMITS.MAX_ACTIVE_ANNOUNCEMENTS_PER_ROOM,
+      );
       const snapshot = await roomAnnouncements(db, roomId)
         .where('active', '==', true)
-        .orderBy('createdAt', 'desc')
-        .limit(Math.min(limit, CHAT_LIMITS.MAX_ACTIVE_ANNOUNCEMENTS_PER_ROOM))
+        .limit(boundedLimit)
         .get();
-      return snapshot.docs.map(readDoc);
+      return snapshot.docs.map(readDoc).sort(sortByIsoDesc('createdAt')).slice(0, boundedLimit);
     },
 
     async listRecent(roomId, limit = CHAT_LIMITS.MAX_ANNOUNCEMENT_HISTORY_LOAD) {
@@ -1000,6 +1005,8 @@ function createFeedbackRepository(db) {
     async listRecent({ type = '', status = '', limit = CHAT_LIMITS.MAX_FEEDBACK_LOAD } = {}) {
       // TODO Phase 10 Firestore index: feedback type/status/createdAt for filtered admin launch queues.
       let query = feedback;
+      const boundedLimit = Math.min(Number(limit) || 50, CHAT_LIMITS.MAX_FEEDBACK_LOAD);
+      const hasFilter = Boolean(type || status);
 
       if (type) {
         query = query.where('type', '==', type);
@@ -1009,8 +1016,13 @@ function createFeedbackRepository(db) {
         query = query.where('status', '==', status);
       }
 
-      const snapshot = await query.orderBy('createdAt', 'desc').limit(Math.min(Number(limit) || 50, CHAT_LIMITS.MAX_FEEDBACK_LOAD)).get();
-      return snapshot.docs.map(readDoc);
+      if (!hasFilter) {
+        const snapshot = await query.orderBy('createdAt', 'desc').limit(boundedLimit).get();
+        return snapshot.docs.map(readDoc);
+      }
+
+      const snapshot = await query.limit(Math.min(boundedLimit * 3, CHAT_LIMITS.MAX_FEEDBACK_LOAD)).get();
+      return snapshot.docs.map(readDoc).sort(sortByIsoDesc('createdAt')).slice(0, boundedLimit);
     },
 
     async updateStatus(feedbackId, status, updatedAt = new Date().toISOString()) {
