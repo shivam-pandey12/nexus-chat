@@ -265,6 +265,53 @@ export function createSocketHandlers(
       });
     });
 
+    socket.on('room:announcement:update', (payload, acknowledge = noop) => {
+      handleRoomAction(socket, acknowledge, async () => {
+        await assertSocketLimit(socket, 'announcements');
+        const cleanPayload = assertPlainObject(payload, 'Announcement payload');
+        const roomId = sanitizeIdentifier(cleanPayload.roomId, 'Room');
+        const announcementId = sanitizeIdentifier(cleanPayload.announcementId, 'Announcement');
+        const { room, announcement, activity } = await roomService.updateAnnouncement(
+          roomId,
+          socket.data.guest,
+          announcementId,
+          cleanPayload,
+        );
+        emitRoomState(room);
+        io.to(room.roomId).emit('room:announcement', { roomId: room.roomId, announcement });
+
+        if (activity) {
+          io.to(room.roomId).emit('room:activity', { roomId: room.roomId, activity });
+        }
+
+        analyticsService?.track?.('room_announcements_updated', { roomId, communityId: room.communityId });
+        acknowledgeSafe(acknowledge, { ok: true, announcement });
+      });
+    });
+
+    socket.on('room:announcement:expire', (payload, acknowledge = noop) => {
+      handleRoomAction(socket, acknowledge, async () => {
+        await assertSocketLimit(socket, 'announcements');
+        const cleanPayload = assertPlainObject(payload, 'Announcement payload');
+        const roomId = sanitizeIdentifier(cleanPayload.roomId, 'Room');
+        const announcementId = sanitizeIdentifier(cleanPayload.announcementId, 'Announcement');
+        const { room, announcement, activity } = await roomService.expireAnnouncement(
+          roomId,
+          socket.data.guest,
+          announcementId,
+        );
+        emitRoomState(room);
+        io.to(room.roomId).emit('room:announcement', { roomId: room.roomId, announcement });
+
+        if (activity) {
+          io.to(room.roomId).emit('room:activity', { roomId: room.roomId, activity });
+        }
+
+        analyticsService?.track?.('room_announcements_expired', { roomId, communityId: room.communityId });
+        acknowledgeSafe(acknowledge, { ok: true, announcement });
+      });
+    });
+
     socket.on('message:send', (payload, acknowledge = noop) => {
       handleRoomAction(socket, acknowledge, async () => {
         await assertSocketLimit(socket, 'messages');
@@ -429,6 +476,49 @@ export function createSocketHandlers(
         }
 
         acknowledgeSafe(acknowledge, { ok: true });
+      });
+    });
+
+    socket.on('message:pin', (payload, acknowledge = noop) => {
+      handleRoomAction(socket, acknowledge, async () => {
+        const cleanPayload = assertPlainObject(payload, 'Pin payload');
+        const roomId = sanitizeIdentifier(cleanPayload.roomId, 'Room');
+        const messageId = sanitizeIdentifier(cleanPayload.messageId, 'Message');
+
+        if (!roomService.isMember(roomId, socket.data.guest.sessionId)) {
+          throw new Error('Join the room before pinning messages.');
+        }
+
+        const { room, pinnedMessage, activity } = await roomService.pinMessage(roomId, socket.data.guest, messageId);
+        emitRoomState(room);
+        io.to(room.roomId).emit('room:pinned', { roomId: room.roomId, pinnedMessage });
+
+        if (activity) {
+          io.to(room.roomId).emit('room:activity', { roomId: room.roomId, activity });
+        }
+
+        acknowledgeSafe(acknowledge, { ok: true, pinnedMessage });
+      });
+    });
+
+    socket.on('message:unpin', (payload, acknowledge = noop) => {
+      handleRoomAction(socket, acknowledge, async () => {
+        const cleanPayload = assertPlainObject(payload, 'Unpin payload');
+        const roomId = sanitizeIdentifier(cleanPayload.roomId, 'Room');
+
+        if (!roomService.isMember(roomId, socket.data.guest.sessionId)) {
+          throw new Error('Join the room before unpinning messages.');
+        }
+
+        const { room, pinnedMessage, previous, activity } = await roomService.unpinMessage(roomId, socket.data.guest);
+        emitRoomState(room);
+        io.to(room.roomId).emit('room:pinned', { roomId: room.roomId, pinnedMessage });
+
+        if (activity) {
+          io.to(room.roomId).emit('room:activity', { roomId: room.roomId, activity });
+        }
+
+        acknowledgeSafe(acknowledge, { ok: true, pinnedMessage, previous });
       });
     });
 

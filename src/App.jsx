@@ -58,6 +58,7 @@ import {
   fetchMyBlocks,
   fetchMyProfile,
   fetchMyRooms,
+  fetchInvitePreview,
   fetchPublicProfile,
   fetchPublicRooms,
   fetchStatus,
@@ -194,6 +195,9 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [connectionState, setConnectionState] = useState('idle');
   const [joiningLink, setJoiningLink] = useState(Boolean(initialInviteCode));
+  const [invitePreview, setInvitePreview] = useState(null);
+  const [inviteLoading, setInviteLoading] = useState(Boolean(initialInviteCode));
+  const [inviteError, setInviteError] = useState('');
   const [socketReadyKey, setSocketReadyKey] = useState(0);
   const [toasts, setToasts] = useState([]);
   const [blockedUsers, setBlockedUsers] = useState(() => loadBlockedUsers());
@@ -656,7 +660,7 @@ export default function App() {
       }
 
       if (state?.room?.inviteCode) {
-        window.history.replaceState(null, '', `/room/${state.room.inviteCode}`);
+        window.history.replaceState(null, '', `/r/${state.room.inviteCode}`);
       }
     });
 
@@ -721,6 +725,20 @@ export default function App() {
           ...current,
           announcements,
           room: { ...current.room, latestAnnouncement: announcements[0] || null },
+        };
+      });
+    });
+
+    nextSocket.on('room:pinned', ({ roomId, pinnedMessage }) => {
+      setRoomState((current) => {
+        if (!current?.room || current.room.roomId !== roomId) {
+          return current;
+        }
+
+        return {
+          ...current,
+          pinnedMessage: pinnedMessage || null,
+          room: { ...current.room, pinnedMessage: pinnedMessage || null },
         };
       });
     });
@@ -807,6 +825,52 @@ export default function App() {
   }, [profile?.sessionId, profile?.userId, addToast]);
 
   useEffect(() => {
+    if (!initialInviteCode) {
+      return;
+    }
+
+    let cancelled = false;
+    setInviteLoading(true);
+    setInviteError('');
+
+    fetchInvitePreview(initialInviteCode)
+      .then((preview) => {
+        if (cancelled) {
+          return;
+        }
+
+        setInvitePreview(preview);
+
+        if (preview?.status && preview.status !== 'available') {
+          setJoiningLink(false);
+          const statusMessage = getInviteStatusMessage(preview.status);
+          setInviteError(statusMessage);
+          setNotice(statusMessage);
+          setView('loading-link');
+        }
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : 'Could not load this invite link.';
+        setInviteError(message);
+        setNotice(message);
+        setView('loading-link');
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setInviteLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const activeSocket = socketRef.current;
 
     if (!profile || !activeSocket?.connected || socketReadyKey === 0) {
@@ -814,6 +878,14 @@ export default function App() {
     }
 
     if (initialInviteCode && !consumedInviteRef.current) {
+      if (inviteLoading) {
+        return;
+      }
+
+      if (invitePreview?.status && invitePreview.status !== 'available') {
+        return;
+      }
+
       consumedInviteRef.current = true;
       setJoiningLink(true);
       emitWithNotice('room:join', { code: initialInviteCode });
@@ -828,7 +900,7 @@ export default function App() {
 
     restoreAttemptedRef.current = true;
     emitWithNotice('room:restore', storedRoom);
-  }, [profile, socketReadyKey, view, roomState?.room?.roomId]);
+  }, [profile, socketReadyKey, view, roomState?.room?.roomId, inviteLoading, invitePreview?.status]);
 
   useEffect(() => {
     if (view !== 'explore') {
@@ -2436,6 +2508,34 @@ export default function App() {
             { success: 'Announcement posted' },
           )
         }
+        onUpdateAnnouncement={(announcementId, payload) =>
+          emitWithNotice(
+            'room:announcement:update',
+            { roomId: roomState.room.roomId, announcementId, ...payload },
+            { success: 'Announcement updated' },
+          )
+        }
+        onExpireAnnouncement={(announcementId) =>
+          emitWithNotice(
+            'room:announcement:expire',
+            { roomId: roomState.room.roomId, announcementId },
+            { success: 'Announcement expired' },
+          )
+        }
+        onPinMessage={(messageId) =>
+          emitWithNotice(
+            'message:pin',
+            { roomId: roomState.room.roomId, messageId },
+            { success: 'Message pinned' },
+          )
+        }
+        onUnpinMessage={() =>
+          emitWithNotice(
+            'message:unpin',
+            { roomId: roomState.room.roomId },
+            { success: 'Pinned message removed' },
+          )
+        }
         onUpdateRoomNotifications={(payload) => handleRoomNotificationState(roomState.room.roomId, payload)}
         onClearRecentMessages={handleClearRecentMessages}
         onCategoryToolAction={handleCategoryToolAction}
@@ -2455,12 +2555,31 @@ export default function App() {
       />
     );
   } else {
+    const inviteRoom = invitePreview?.room;
+    const loadingTitle = inviteError
+      ? 'Room link unavailable'
+      : joiningLink
+        ? 'Joining room...'
+        : inviteRoom?.title
+          ? `Join ${inviteRoom.title}`
+          : 'Preparing Nexus Chat...';
+    const loadingBody = inviteError
+      || (inviteLoading
+        ? 'Checking this invite safely before joining.'
+        : inviteRoom
+          ? `${inviteRoom.type || 'Room'} room · ${inviteRoom.memberCount || 0} online${inviteRoom.expiresAt ? ` · ${formatInviteExpiry(inviteRoom.expiresAt)}` : ''}`
+          : notice || 'Connecting to the room link.');
+
     screen = (
       <main className="form-page">
         <div className="empty-state">
-          <h1>{joiningLink ? 'Joining room...' : 'Preparing Nexus Chat...'}</h1>
-          <p>{notice || 'Connecting to the room link.'}</p>
-          {notice && (
+          <p className="eyebrow">Invite link</p>
+          <h1>{loadingTitle}</h1>
+          <p>{loadingBody}</p>
+          {inviteRoom?.inviteCode && !inviteError && (
+            <span className="status-pill">Code {inviteRoom.inviteCode}</span>
+          )}
+          {(notice || inviteError) && (
             <button className="button button--primary" type="button" onClick={() => setView('explore')}>
               Explore Rooms
             </button>
@@ -2848,8 +2967,53 @@ export default function App() {
 }
 
 function getInviteCodeFromPath() {
-  const match = window.location.pathname.match(/^\/room\/([a-zA-Z0-9_-]+)$/);
+  const match = window.location.pathname.match(/^\/(?:room|r)\/([a-zA-Z0-9_-]+)$/);
   return match?.[1]?.toUpperCase() || '';
+}
+
+function getInviteStatusMessage(status) {
+  const messages = {
+    deleted: 'This room was closed by its owner.',
+    expired: 'This temporary room has expired.',
+    locked: 'This room is locked right now. Ask the owner for access.',
+    invalid: 'This invite link does not match an available Nexus room.',
+    unavailable: 'This invite link is not available right now.',
+  };
+
+  return messages[status] || 'This invite link is not available right now.';
+}
+
+function formatInviteExpiry(value) {
+  if (!value) {
+    return 'No expiry';
+  }
+
+  const timestamp = Date.parse(value);
+
+  if (!Number.isFinite(timestamp)) {
+    return 'Expiry unknown';
+  }
+
+  const diff = timestamp - Date.now();
+
+  if (diff <= 0) {
+    return 'Expired';
+  }
+
+  const minutes = Math.ceil(diff / 60000);
+
+  if (minutes < 60) {
+    return `Expires in ${minutes} min`;
+  }
+
+  const hours = Math.ceil(minutes / 60);
+
+  if (hours < 48) {
+    return `Expires in ${hours} hour${hours === 1 ? '' : 's'}`;
+  }
+
+  const days = Math.ceil(hours / 24);
+  return `Expires in ${days} day${days === 1 ? '' : 's'}`;
 }
 
 function resolveSidePanelTriggerVariant() {

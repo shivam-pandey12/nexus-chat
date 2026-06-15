@@ -275,6 +275,14 @@ app.get('/api/rooms/public', async (_request, response) => {
   }
 });
 
+app.get('/api/rooms/invite/:inviteCode', async (request, response) => {
+  try {
+    response.json(await roomService.getInvitePreview(request.params.inviteCode));
+  } catch (error) {
+    response.status(400).json({ error: error instanceof Error ? error.message : 'Could not load invite preview.' });
+  }
+});
+
 app.get('/api/rooms/:roomId', async (request, response) => {
   const room = await roomService.findOrLoadRoom(request.params.roomId);
 

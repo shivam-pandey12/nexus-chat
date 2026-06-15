@@ -33,6 +33,7 @@ const MOD_TOOLS = new Set([
   'draft_pin',
   'hub_link_panel',
   'official_announcement',
+  'quick_poll',
 ]);
 
 const ADMIN_ONLY_TOOLS = new Set(['official_badge']);
@@ -45,7 +46,6 @@ const USER_CREATABLE_TOOLS = new Set([
   'priority_tag',
   'topic_spinner',
   'icebreaker_prompt',
-  'quick_poll',
   'room_event',
   'product_feedback',
 ]);
@@ -307,6 +307,10 @@ export function createCategoryFeatureService({ repositories = {}, entitlementSer
 
     if (tool.toolType !== 'quick_poll') {
       throw new Error('That tool is not a poll.');
+    }
+
+    if (['closed', 'completed', 'dismissed'].includes(tool.status)) {
+      throw new Error('This poll is closed.');
     }
 
     const options = Array.isArray(tool.metadata?.options) ? tool.metadata.options : [];

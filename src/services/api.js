@@ -9,6 +9,10 @@ export async function fetchPublicRooms() {
   return data.rooms || [];
 }
 
+export async function fetchInvitePreview(inviteCode) {
+  return requestJson(`/api/rooms/invite/${encodeURIComponent(inviteCode)}`);
+}
+
 export async function fetchStatus() {
   return requestJson('/api/status');
 }

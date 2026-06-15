@@ -35,6 +35,10 @@ export default function ChatRoom({
   onSetRole,
   onSaveRules,
   onCreateAnnouncement,
+  onUpdateAnnouncement,
+  onExpireAnnouncement,
+  onPinMessage,
+  onUnpinMessage,
   onUpdateRoomNotifications,
   onClearRecentMessages,
   onCategoryToolAction,
@@ -63,6 +67,8 @@ export default function ChatRoom({
   const [rulesDraft, setRulesDraft] = useState(state?.room?.rules || '');
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementBody, setAnnouncementBody] = useState('');
+  const [announcementExpiresAt, setAnnouncementExpiresAt] = useState('');
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState('');
   const [codeMode, setCodeMode] = useState(false);
   const [secretWarningAccepted, setSecretWarningAccepted] = useState(false);
   const [pollComposerOpen, setPollComposerOpen] = useState(false);
@@ -72,11 +78,14 @@ export default function ChatRoom({
   const [profileTarget, setProfileTarget] = useState(null);
   const [profilePreview, setProfilePreview] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const messagesViewportRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const lastMessageCountRef = useRef(0);
   const messageRefs = useRef(new Map());
   const typingStopTimerRef = useRef(null);
   const lastTypingSentRef = useRef(0);
   const onTypingStopRef = useRef(onTypingStop);
+  const [newMessagesAway, setNewMessagesAway] = useState(0);
 
   const room = state?.room;
   const messages = state?.messages || [];
@@ -85,7 +94,9 @@ export default function ChatRoom({
   const isOwner = Boolean(state?.currentUser?.isOwner || room?.ownerSessionId === profile?.sessionId);
   const canModerate = Boolean(state?.currentUser?.canModerate || isOwner);
   const isMuted = Boolean(state?.currentUser?.isMuted);
-  const activeAnnouncement = (state?.announcements || []).find((announcement) => announcement.active);
+  const activeAnnouncements = (state?.announcements || []).filter(isActiveAnnouncement);
+  const activeAnnouncement = activeAnnouncements[0] || null;
+  const pinnedMessage = state?.pinnedMessage || room?.pinnedMessage || null;
   const blockedSet = useMemo(() => new Set(blockedUsers), [blockedUsers]);
   const roomCategory = getCategoryConfig(room?.categorySlug || room?.category);
   const categoryTools = state?.categoryTools || [];
@@ -100,8 +111,44 @@ export default function ChatRoom({
   }, [room?.rules]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length]);
+    const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
+
+    function updateVisualHeight() {
+      const height = viewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty('--nexus-visual-height', `${height}px`);
+    }
+
+    updateVisualHeight();
+    viewport?.addEventListener('resize', updateVisualHeight);
+    viewport?.addEventListener('scroll', updateVisualHeight);
+    window.addEventListener('resize', updateVisualHeight);
+
+    return () => {
+      viewport?.removeEventListener('resize', updateVisualHeight);
+      viewport?.removeEventListener('scroll', updateVisualHeight);
+      window.removeEventListener('resize', updateVisualHeight);
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousCount = lastMessageCountRef.current;
+    const latest = messages[messages.length - 1];
+    const isOwnLatest =
+      Boolean(profile?.userId && latest?.senderUserId && latest.senderUserId === profile.userId) ||
+      Boolean(profile?.sessionId && latest?.senderSessionId && latest.senderSessionId === profile.sessionId);
+    const shouldAutoScroll = previousCount === 0 || isOwnLatest || isNearMessageBottom(messagesViewportRef.current);
+
+    if (messages.length > previousCount) {
+      if (shouldAutoScroll) {
+        requestAnimationFrame(() => scrollMessagesToBottom('smooth'));
+        setNewMessagesAway(0);
+      } else {
+        setNewMessagesAway((current) => current + messages.length - previousCount);
+      }
+    }
+
+    lastMessageCountRef.current = messages.length;
+  }, [messages.length, profile?.sessionId, profile?.userId]);
 
   useEffect(() => {
     onTypingStopRef.current = onTypingStop;
@@ -119,8 +166,26 @@ export default function ChatRoom({
       return '';
     }
 
-    return `${window.location.origin}/room/${room.inviteCode}`;
+    return `${window.location.origin}/r/${room.inviteCode}`;
   }, [room?.inviteCode]);
+
+  function scrollMessagesToBottom(behavior = 'smooth') {
+    messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
+  }
+
+  function handleMessagesScroll() {
+    if (isNearMessageBottom(messagesViewportRef.current)) {
+      setNewMessagesAway(0);
+    }
+  }
+
+  function jumpToPinnedMessage() {
+    if (!pinnedMessage?.messageId) {
+      return;
+    }
+
+    jumpToMessage(pinnedMessage.messageId);
+  }
 
   if (!room) {
     return (
@@ -210,12 +275,24 @@ export default function ChatRoom({
 
   function submitPollFromComposer() {
     const question = pollDraft.question.trim();
-    const options = [pollDraft.optionA, pollDraft.optionB, pollDraft.optionC, pollDraft.optionD]
+    const options = [
+      pollDraft.optionA,
+      pollDraft.optionB,
+      pollDraft.optionC,
+      pollDraft.optionD,
+      pollDraft.optionE,
+      pollDraft.optionF,
+    ]
       .map((option) => option.trim())
       .filter(Boolean);
 
     if (!question || options.length < 2) {
       onToast?.('Polls need a question and at least two options.', 'error');
+      return;
+    }
+
+    if (!canModerate) {
+      onToast?.('Only the room owner or a moderator can create polls.', 'error');
       return;
     }
 
@@ -335,6 +412,26 @@ export default function ChatRoom({
     onToast?.('Room code copied');
   }
 
+  async function shareInviteLink() {
+    if (navigator.share && inviteLink) {
+      try {
+        await navigator.share({
+          title: room.title,
+          text: `Join ${room.title} on Nexus Chat`,
+          url: inviteLink,
+        });
+        onToast?.('Invite shared');
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
+    await copyInviteLink();
+  }
+
   async function copyMessageText(content) {
     await copyText(content);
     onToast?.('Message copied');
@@ -377,9 +474,37 @@ export default function ChatRoom({
       return;
     }
 
-    onCreateAnnouncement?.({ title: announcementTitle, body: announcementBody });
+    const payload = {
+      title: announcementTitle,
+      body: announcementBody,
+      expiresAt: announcementExpiresAt || '',
+    };
+
+    if (editingAnnouncementId) {
+      onUpdateAnnouncement?.(editingAnnouncementId, payload);
+    } else {
+      onCreateAnnouncement?.(payload);
+    }
+
     setAnnouncementTitle('');
     setAnnouncementBody('');
+    setAnnouncementExpiresAt('');
+    setEditingAnnouncementId('');
+  }
+
+  function editAnnouncement(announcement) {
+    setEditingAnnouncementId(announcement.announcementId);
+    setAnnouncementTitle(announcement.title || '');
+    setAnnouncementBody(announcement.body || '');
+    setAnnouncementExpiresAt(toDateTimeLocalValue(announcement.expiresAt));
+    setDrawerOpen(true);
+  }
+
+  function cancelAnnouncementEdit() {
+    setEditingAnnouncementId('');
+    setAnnouncementTitle('');
+    setAnnouncementBody('');
+    setAnnouncementExpiresAt('');
   }
 
   function dismissSafetyBanner() {
@@ -410,6 +535,7 @@ export default function ChatRoom({
                 {room.isLocked ? 'locked' : 'open'}
               </span>
               <span className="pill pill--muted">{room.memberCount} online</span>
+              {room.expiresAt && <span className="pill pill--muted">{formatExpiryLabel(room.expiresAt)}</span>}
               <span className={`connection connection--${connectionState}`}>
                 {formatConnectionState(connectionState)}
               </span>
@@ -453,16 +579,34 @@ export default function ChatRoom({
             <div>
               <strong>{activeAnnouncement.title}</strong>
               <p>{activeAnnouncement.body}</p>
+              {activeAnnouncement.expiresAt && <small>{formatExpiryLabel(activeAnnouncement.expiresAt)}</small>}
             </div>
           </div>
         )}
+        {pinnedMessage && (
+          <button className="pinned-message-bar" type="button" onClick={jumpToPinnedMessage}>
+            <span><Icon name="sparkle" size={16} /> Pinned</span>
+            <strong>{pinnedMessage.senderName || 'Room'}:</strong>
+            <em>{pinnedMessage.content || 'Pinned room message'}</em>
+          </button>
+        )}
 
-        <div className={cn('messages premium-scroll', tw.messageList)} aria-live="polite">
+        <div
+          className={cn('messages premium-scroll', tw.messageList)}
+          ref={messagesViewportRef}
+          onScroll={handleMessagesScroll}
+          aria-live="polite"
+        >
           {messages.length === 0 ? (
             <div className={cn('empty-state empty-state--compact', tw.glassSoft, 'm-auto max-w-md p-7 text-center')}>
               <span className="empty-state__sigil" aria-hidden="true" />
-              <h2>No messages yet</h2>
-              <p>Send the first message when someone joins.</p>
+              <h2>This temporary room is ready</h2>
+              <p>Invite people, post a poll or event, pin a useful message, and start chatting.</p>
+              <div className="empty-state__actions">
+                <button className="button button--soft" type="button" onClick={copyInviteLink}>Copy invite</button>
+                {canModerate && <button className="button button--ghost" type="button" onClick={() => setPollComposerOpen(true)}>Create poll</button>}
+                <button className="button button--ghost" type="button" onClick={() => setEventComposerOpen(true)}>Create event</button>
+              </div>
             </div>
           ) : (
             messages.map((message) => {
@@ -518,19 +662,31 @@ export default function ChatRoom({
                   onJumpToReply={jumpToMessage}
                   roomCategory={roomCategory.slug}
                   categoryTools={categoryTools}
+                  canModerate={canModerate}
+                  isPinned={pinnedMessage?.messageId === message.messageId}
                   onPollVote={(toolId, optionIndex) =>
                     onCategoryToolAction?.('categoryTool:pollVote', { toolId, optionIndex }, { success: 'Vote counted' })
+                  }
+                  onClosePoll={(toolId) =>
+                    onCategoryToolAction?.('categoryTool:update', { toolId, status: 'closed' }, { success: 'Poll closed' })
                   }
                   onEventRsvp={(toolId, value) =>
                     onCategoryToolAction?.('categoryTool:vote', { toolId, value }, { success: 'RSVP updated' })
                   }
                   onCategoryMessageAction={(toolType, label) => handleCategoryMessageAction(message, toolType, label)}
+                  onPinMessage={() => onPinMessage?.(message.messageId)}
+                  onUnpinMessage={() => onUnpinMessage?.()}
                 />
               );
             })
           )}
           <div ref={messagesEndRef} />
         </div>
+        {newMessagesAway > 0 && (
+          <button className="new-message-pill" type="button" onClick={() => { scrollMessagesToBottom('smooth'); setNewMessagesAway(0); }}>
+            {newMessagesAway} new message{newMessagesAway === 1 ? '' : 's'}
+          </button>
+        )}
 
         {typingLabel && (
           <div className="typing-banner">
@@ -553,6 +709,7 @@ export default function ChatRoom({
           )}
           <CategoryQuickTools
             room={room}
+            canModerate={canModerate}
             codeMode={codeMode}
             draft={draft}
             onToggleCodeMode={() => setCodeMode((current) => !current)}
@@ -578,6 +735,8 @@ export default function ChatRoom({
                 <input className={cn('premium-input', tw.input)} placeholder="Option 2" value={pollDraft.optionB} onChange={(event) => updatePollDraft('optionB', event.target.value)} />
                 <input className={cn('premium-input', tw.input)} placeholder="Option 3 optional" value={pollDraft.optionC} onChange={(event) => updatePollDraft('optionC', event.target.value)} />
                 <input className={cn('premium-input', tw.input)} placeholder="Option 4 optional" value={pollDraft.optionD} onChange={(event) => updatePollDraft('optionD', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} placeholder="Option 5 optional" value={pollDraft.optionE} onChange={(event) => updatePollDraft('optionE', event.target.value)} />
+                <input className={cn('premium-input', tw.input)} placeholder="Option 6 optional" value={pollDraft.optionF} onChange={(event) => updatePollDraft('optionF', event.target.value)} />
                 <button className={cn('button button--soft composer-poll-card__post', tw.buttonSoft)} type="button" onClick={submitPollFromComposer}>
                   Post poll
                 </button>
@@ -689,6 +848,10 @@ export default function ChatRoom({
             <strong>{room.ownerName || 'Owner'}</strong>
             <span>Status</span>
             <strong>{room.isLocked ? 'Locked' : 'Open'}</strong>
+            <span>Expiry</span>
+            <strong>{formatExpiryLabel(room.expiresAt)}</strong>
+            <span>Invite code</span>
+            <strong>{room.inviteCode}</strong>
             <span>Theme</span>
             <strong>{formatThemeTitle(room.themeId)}</strong>
             <span>Capacity</span>
@@ -703,6 +866,9 @@ export default function ChatRoom({
             </button>
             <button className="button button--ghost button--wide" type="button" onClick={copyRoomCode}>
               Copy Room Code
+            </button>
+            <button className="button button--ghost button--wide" type="button" onClick={shareInviteLink}>
+              Share Invite
             </button>
             <button
               className="button button--ghost button--wide"
@@ -751,15 +917,25 @@ export default function ChatRoom({
           </div>
           <div className="room-rules">
             <p className="eyebrow">Announcements</p>
-            {(state?.announcements || []).length === 0 ? (
+            {activeAnnouncements.length === 0 ? (
               <p className="muted">No active announcements.</p>
             ) : (
               <div className="announcement-list">
-                {(state?.announcements || []).map((announcement) => (
+                {activeAnnouncements.map((announcement) => (
                   <article className="announcement-card" key={announcement.announcementId}>
                     <strong>{announcement.title}</strong>
                     <p>{announcement.body}</p>
-                    <small>{formatDateTime(announcement.createdAt)}</small>
+                    <small>{announcement.expiresAt ? formatExpiryLabel(announcement.expiresAt) : formatDateTime(announcement.createdAt)}</small>
+                    {canModerate && (
+                      <div className="stacked-actions stacked-actions--inline">
+                        <button className="button button--ghost button--small" type="button" onClick={() => editAnnouncement(announcement)}>
+                          Edit
+                        </button>
+                        <button className="button button--ghost button--small" type="button" onClick={() => onExpireAnnouncement?.(announcement.announcementId)}>
+                          Expire
+                        </button>
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
@@ -823,7 +999,7 @@ export default function ChatRoom({
         {canModerate && (
           <section className={cn('panel announcement-tools drawer-card', tw.drawerSection, 'mb-4')}>
             <p className="eyebrow">Announcements</p>
-            <h2>Post room update</h2>
+            <h2>{editingAnnouncementId ? 'Edit room update' : 'Post room update'}</h2>
             <form className="announcement-form" onSubmit={submitAnnouncement}>
               <label className="field">
                 <span>Title</span>
@@ -843,9 +1019,22 @@ export default function ChatRoom({
                   onChange={(event) => setAnnouncementBody(event.target.value)}
                 />
               </label>
+              <label className="field">
+                <span>Optional expiry</span>
+                <input
+                  type="datetime-local"
+                  value={announcementExpiresAt}
+                  onChange={(event) => setAnnouncementExpiresAt(event.target.value)}
+                />
+              </label>
               <button className="button button--soft button--wide" type="submit">
-                Post Announcement
+                {editingAnnouncementId ? 'Update Announcement' : 'Post Announcement'}
               </button>
+              {editingAnnouncementId && (
+                <button className="button button--ghost button--wide" type="button" onClick={cancelAnnouncementEdit}>
+                  Cancel Edit
+                </button>
+              )}
             </form>
           </section>
         )}
@@ -997,6 +1186,8 @@ function emptyPollDraft() {
     optionB: '',
     optionC: '',
     optionD: '',
+    optionE: '',
+    optionF: '',
   };
 }
 
@@ -1007,6 +1198,75 @@ function emptyEventDraft() {
     location: '',
     description: '',
   };
+}
+
+function isNearMessageBottom(node) {
+  if (!node) {
+    return true;
+  }
+
+  return node.scrollHeight - node.scrollTop - node.clientHeight < 160;
+}
+
+function isActiveAnnouncement(announcement) {
+  if (!announcement || announcement.active === false || announcement.expiredAt) {
+    return false;
+  }
+
+  if (!announcement.expiresAt) {
+    return true;
+  }
+
+  const timestamp = Date.parse(announcement.expiresAt);
+  return !Number.isFinite(timestamp) || timestamp > Date.now();
+}
+
+function toDateTimeLocalValue(value) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function formatExpiryLabel(value) {
+  if (!value) {
+    return 'No expiry';
+  }
+
+  const timestamp = Date.parse(value);
+
+  if (!Number.isFinite(timestamp)) {
+    return 'Expiry unknown';
+  }
+
+  const diff = timestamp - Date.now();
+
+  if (diff <= 0) {
+    return 'Expired';
+  }
+
+  const minutes = Math.ceil(diff / 60000);
+
+  if (minutes < 60) {
+    return `Expires in ${minutes} min`;
+  }
+
+  const hours = Math.ceil(minutes / 60);
+
+  if (hours < 48) {
+    return `Expires in ${hours} hour${hours === 1 ? '' : 's'}`;
+  }
+
+  const days = Math.ceil(hours / 24);
+  return `Expires in ${days} day${days === 1 ? '' : 's'}`;
 }
 
 function MessageBubble({
@@ -1026,9 +1286,14 @@ function MessageBubble({
   onJumpToReply,
   roomCategory,
   categoryTools,
+  canModerate,
+  isPinned,
   onPollVote,
+  onClosePoll,
   onEventRsvp,
   onCategoryMessageAction,
+  onPinMessage,
+  onUnpinMessage,
 }) {
   const time = new Intl.DateTimeFormat([], {
     hour: '2-digit',
@@ -1065,7 +1330,15 @@ function MessageBubble({
           </button>
         )}
 
-        <MessageContent message={message} isDeleted={isDeleted} categoryTools={categoryTools} onPollVote={onPollVote} onEventRsvp={onEventRsvp} />
+        <MessageContent
+          message={message}
+          isDeleted={isDeleted}
+          categoryTools={categoryTools}
+          canModerate={canModerate}
+          onPollVote={onPollVote}
+          onClosePoll={onClosePoll}
+          onEventRsvp={onEventRsvp}
+        />
 
         {message.categoryMarkers?.length > 0 && (
           <div className="message-marker-row">
@@ -1104,6 +1377,11 @@ function MessageBubble({
               <button type="button" onClick={onCopy}>
                 Copy text
               </button>
+              {isOwner && (
+                <button type="button" onClick={isPinned ? onUnpinMessage : onPinMessage}>
+                  {isPinned ? 'Unpin message' : 'Pin message'}
+                </button>
+              )}
               {(isMine || isOwner) && isToolEnabledForCategory('doubt_marker', roomCategory) && (
                 <button type="button" onClick={() => onCategoryMessageAction?.('doubt_marker', 'Need help')}>
                   Need help
@@ -1164,7 +1442,7 @@ function MessageBubble({
   );
 }
 
-function MessageContent({ message, isDeleted, categoryTools = [], onPollVote, onEventRsvp }) {
+function MessageContent({ message, isDeleted, categoryTools = [], canModerate = false, onPollVote, onClosePoll, onEventRsvp }) {
   if (isDeleted) {
     return <p className="message__content">Message deleted</p>;
   }
@@ -1184,7 +1462,16 @@ function MessageContent({ message, isDeleted, categoryTools = [], onPollVote, on
   }
 
   if (['match_invite', 'score_card', 'topic_card', 'poll_card', 'event_card'].includes(message.messageType)) {
-    return <SpecialMessageCard message={message} categoryTools={categoryTools} onPollVote={onPollVote} onEventRsvp={onEventRsvp} />;
+    return (
+      <SpecialMessageCard
+        message={message}
+        categoryTools={categoryTools}
+        canModerate={canModerate}
+        onPollVote={onPollVote}
+        onClosePoll={onClosePoll}
+        onEventRsvp={onEventRsvp}
+      />
+    );
   }
 
   return (
@@ -1194,11 +1481,13 @@ function MessageContent({ message, isDeleted, categoryTools = [], onPollVote, on
   );
 }
 
-function SpecialMessageCard({ message, categoryTools = [], onPollVote, onEventRsvp }) {
+function SpecialMessageCard({ message, categoryTools = [], canModerate = false, onPollVote, onClosePoll, onEventRsvp }) {
   const linkedTool = categoryTools.find((tool) => tool.toolId && tool.toolId === message.categoryToolId) || null;
   const pollOptions = linkedTool?.metadata?.options?.length ? linkedTool.metadata.options : message.metadata?.options || [];
   const pollResults = linkedTool?.metadata?.results?.length ? linkedTool.metadata.results : message.metadata?.results || [];
   const pollTotal = pollResults.reduce((sum, count) => sum + Number(count || 0), 0);
+  const pollStatus = linkedTool?.status || message.metadata?.status || 'open';
+  const pollClosed = ['closed', 'completed', 'dismissed'].includes(pollStatus);
   const eventMetadata = message.messageType === 'event_card' ? { ...(message.metadata || {}), ...(linkedTool?.metadata || {}) } : {};
   const eventSummary = eventMetadata.rsvpSummary || {};
   const card = {
@@ -1238,6 +1527,16 @@ function SpecialMessageCard({ message, categoryTools = [], onPollVote, onEventRs
       <p>{message.content}</p>
       {message.messageType === 'poll_card' && pollOptions.length > 0 ? (
         <div className="message-card__poll-options">
+          <div className="message-card__status-row">
+            <span className={`status-pill ${pollClosed ? 'pill--muted' : 'pill--live'}`}>
+              {pollClosed ? 'Closed poll' : 'Open poll'}
+            </span>
+            {canModerate && linkedTool?.toolId && !pollClosed && (
+              <button className="button button--ghost button--small" type="button" onClick={() => onClosePoll?.(linkedTool.toolId)}>
+                Close poll
+              </button>
+            )}
+          </div>
           {pollOptions.map((option, index) => {
             const count = Number(pollResults[index] || 0);
             const percentage = pollTotal ? Math.round((count / pollTotal) * 100) : 0;
@@ -1247,7 +1546,7 @@ function SpecialMessageCard({ message, categoryTools = [], onPollVote, onEventRs
                 key={`${option}_${index}`}
                 type="button"
                 onClick={() => linkedTool?.toolId && onPollVote?.(linkedTool.toolId, index)}
-                disabled={!linkedTool?.toolId}
+                disabled={!linkedTool?.toolId || pollClosed}
               >
                 <span className="message-card__poll-fill" style={{ width: `${percentage}%` }} aria-hidden="true" />
                 <strong>{option}</strong>

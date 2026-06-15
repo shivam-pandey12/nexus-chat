@@ -265,6 +265,7 @@ export default function CategoryToolsPanel({
 
 export function CategoryQuickTools({
   room,
+  canModerate = false,
   codeMode,
   draft,
   onToggleCodeMode,
@@ -294,7 +295,7 @@ export function CategoryQuickTools({
           <Icon name="shuffle" size={15} /> Topic
         </button>
       )}
-      {isToolEnabledForCategory('quick_poll', category.slug) && (
+      {canModerate && isToolEnabledForCategory('quick_poll', category.slug) && (
         <button className="tool-chip inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-inset)] px-3 py-2 text-xs font-black transition-all hover:-translate-y-0.5" type="button" onClick={onOpenPoll}>
           <Icon name="shuffle" size={15} /> Poll
         </button>

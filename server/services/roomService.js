@@ -138,6 +138,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       lastMessagePreview: '',
       lastMessageAt: null,
       latestAnnouncement: null,
+      pinnedMessage: null,
     };
 
     rooms.set(roomId, room);
@@ -903,7 +904,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       limits.activeAnnouncements || 1,
       CHAT_LIMITS.MAX_ACTIVE_ANNOUNCEMENTS_PER_ROOM,
     );
-    const activeAnnouncements = room.announcements.filter((announcement) => announcement.active);
+    const activeAnnouncements = room.announcements.filter(isAnnouncementActive);
 
     if (activeAnnouncements.length >= cap) {
       throw new Error('Announcement limit reached for this room plan.');
@@ -920,6 +921,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       createdByName: requester.displayName,
       createdAt: now,
       pinnedUntil: payload.pinnedUntil || null,
+      expiresAt: sanitizeAnnouncementExpiry(payload.expiresAt),
       active: true,
     });
 
@@ -932,6 +934,127 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
     });
     touchRoom(room);
     return { room, announcement, activity };
+  }
+
+  async function updateAnnouncement(roomId, requester, announcementId, payload = {}) {
+    const room = requireRoom(roomId);
+    await requireModerator(room, requester);
+    await prepareRoomAnnouncements(room);
+    const announcement = requireAnnouncement(room, announcementId);
+
+    announcement.title = sanitizeAnnouncementTitle(payload.title ?? announcement.title);
+    announcement.body = sanitizeAnnouncementBody(payload.body ?? announcement.body);
+    announcement.expiresAt = sanitizeAnnouncementExpiry(payload.expiresAt, { allowEmpty: true }) || null;
+    announcement.updatedAt = new Date().toISOString();
+    announcement.active = true;
+    announcement.expiredAt = null;
+    room.latestAnnouncement = room.announcements.find(isAnnouncementActive) || null;
+    writeLater(announcementRepository.update?.(room.roomId, announcement.announcementId, serializeAnnouncement(announcement)), 'announcement update');
+    const activity = addActivity(room.roomId, 'announcement_posted', requester, {
+      announcementId: announcement.announcementId,
+      title: announcement.title,
+      action: 'updated',
+    });
+    touchRoom(room);
+    return { room, announcement: serializeAnnouncement(announcement), activity };
+  }
+
+  async function expireAnnouncement(roomId, requester, announcementId) {
+    const room = requireRoom(roomId);
+    await requireModerator(room, requester);
+    await prepareRoomAnnouncements(room);
+    const announcement = requireAnnouncement(room, announcementId);
+    const expiredAt = new Date().toISOString();
+    announcement.active = false;
+    announcement.expiredAt = expiredAt;
+    announcement.removedAt = expiredAt;
+    announcement.removedBySessionId = requester.sessionId || '';
+    room.latestAnnouncement = room.announcements.find(isAnnouncementActive) || null;
+    writeLater(
+      announcementRepository.update?.(room.roomId, announcement.announcementId, {
+        active: false,
+        expiredAt,
+        removedAt: expiredAt,
+        removedBySessionId: announcement.removedBySessionId,
+      }),
+      'announcement expire',
+    );
+    const activity = addActivity(room.roomId, 'announcement_posted', requester, {
+      announcementId: announcement.announcementId,
+      title: announcement.title,
+      action: 'expired',
+    });
+    touchRoom(room);
+    return { room, announcement: serializeAnnouncement(announcement), activity };
+  }
+
+  async function pinMessage(roomId, requester, messageId) {
+    const room = requireRoom(roomId);
+    await requireModerator(room, requester);
+    await prepareRoomHistory(room);
+    const message = requireMessage(room, String(messageId || '').trim());
+
+    if (message.deletedAt || message.type === 'system') {
+      throw new Error('Only active chat messages can be pinned.');
+    }
+
+    const pinnedAt = new Date().toISOString();
+    room.pinnedMessage = serializePinnedMessage({
+      messageId: message.messageId,
+      roomId: room.roomId,
+      senderName: message.senderName,
+      senderSessionId: message.senderSessionId,
+      senderUserId: message.senderUserId || null,
+      content: message.content,
+      messageType: message.messageType || 'text',
+      createdAt: message.createdAt,
+      pinnedAt,
+      pinnedBySessionId: requester.sessionId,
+      pinnedByUserId: requester.userId || null,
+      pinnedByName: requester.displayName,
+    });
+    touchRoom(room, { updatedAt: pinnedAt });
+    const activity = addActivity(room.roomId, 'system_notice', requester, {
+      action: 'message_pinned',
+      messageId: message.messageId,
+    });
+    return { room, pinnedMessage: room.pinnedMessage, activity };
+  }
+
+  async function unpinMessage(roomId, requester) {
+    const room = requireRoom(roomId);
+    await requireModerator(room, requester);
+    const previous = room.pinnedMessage ? serializePinnedMessage(room.pinnedMessage) : null;
+    room.pinnedMessage = null;
+    touchRoom(room);
+    const activity = addActivity(room.roomId, 'system_notice', requester, {
+      action: 'message_unpinned',
+      messageId: previous?.messageId || '',
+    });
+    return { room, pinnedMessage: null, previous, activity };
+  }
+
+  async function getInvitePreview(inviteCode) {
+    const cleanCode = String(inviteCode || '').trim().toUpperCase();
+    const room = cleanCode ? await findOrLoadRoom(cleanCode, { includeUnavailable: true }) : null;
+
+    if (!room) {
+      return { ok: false, status: 'invalid', code: cleanCode };
+    }
+
+    const status = room.deletedAt
+      ? 'deleted'
+      : isExpired(room)
+        ? 'expired'
+        : room.isLocked
+          ? 'locked'
+          : 'available';
+
+    return {
+      ok: status === 'available',
+      status,
+      room: toInvitePreview(room),
+    };
   }
 
   async function publishScheduledAnnouncement(roomId, actor, payload = {}) {
@@ -979,7 +1102,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
     announcement.active = false;
     announcement.removedAt = new Date().toISOString();
     announcement.removedBySessionId = actor?.sessionId || 'admin';
-    room.latestAnnouncement = room.announcements.find((item) => item.active) || null;
+    room.latestAnnouncement = room.announcements.find(isAnnouncementActive) || null;
     writeLater(
       announcementRepository.update?.(room.roomId, announcement.announcementId, {
         active: false,
@@ -1051,9 +1174,10 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       messages: room.messages.map((message) => serializeMessage(message, viewerSessionId)),
       users: getUsers(room, viewerSessionId),
       typingUsers: getTypingUsers(room, viewerSessionId),
-      announcements: (room.announcements || []).filter((announcement) => announcement.active).slice(0, CHAT_LIMITS.MAX_ACTIVE_ANNOUNCEMENTS_PER_ROOM).map(serializeAnnouncement),
+      announcements: (room.announcements || []).filter(isAnnouncementActive).slice(0, CHAT_LIMITS.MAX_ACTIVE_ANNOUNCEMENTS_PER_ROOM).map(serializeAnnouncement),
       activity: (room.activity || []).slice(0, CHAT_LIMITS.MAX_ROOM_ACTIVITY_LOAD).map(serializeActivity),
       categoryTools: (room.categoryTools || []).slice(0, CHAT_LIMITS.MAX_CATEGORY_TOOLS_LOAD).map(serializeCategoryTool),
+      pinnedMessage: room.pinnedMessage ? serializePinnedMessage(room.pinnedMessage) : null,
       currentUser: {
         role,
         isOwner: role === 'owner',
@@ -1093,6 +1217,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       lastMessagePreview: room.lastMessagePreview || '',
       lastMessageAt: room.lastMessageAt || null,
       latestAnnouncement: room.latestAnnouncement ? serializeAnnouncement(room.latestAnnouncement) : null,
+      pinnedMessage: room.pinnedMessage ? serializePinnedMessage(room.pinnedMessage) : null,
     };
   }
 
@@ -1294,6 +1419,17 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
     return message;
   }
 
+  function requireAnnouncement(room, announcementId) {
+    const cleanAnnouncementId = String(announcementId || '').trim();
+    const announcement = room.announcements.find((item) => item.announcementId === cleanAnnouncementId);
+
+    if (!announcement) {
+      throw new Error('Announcement not found.');
+    }
+
+    return announcement;
+  }
+
   function requireMember(room, sessionId) {
     const member = room.members.get(sessionId);
 
@@ -1387,6 +1523,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       lastMessagePreview: room.lastMessagePreview || '',
       lastMessageAt: room.lastMessageAt || null,
       latestAnnouncement: room.latestAnnouncement ? serializeAnnouncement(room.latestAnnouncement) : null,
+      pinnedMessage: room.pinnedMessage ? serializePinnedMessage(room.pinnedMessage) : null,
     };
   }
 
@@ -1476,6 +1613,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       lastMessagePreview: room.lastMessagePreview || '',
       lastMessageAt: room.lastMessageAt || null,
       latestAnnouncement: room.latestAnnouncement ? serializeAnnouncement(room.latestAnnouncement) : null,
+      pinnedMessage: room.pinnedMessage ? serializePinnedMessage(room.pinnedMessage) : null,
     };
   }
 
@@ -1515,6 +1653,40 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
 
     const expiresAt = new Date(room.expiresAt).getTime();
     return Number.isFinite(expiresAt) && expiresAt <= Date.now();
+  }
+
+  function isAnnouncementActive(announcement) {
+    if (!announcement || announcement.active === false || announcement.removedAt || announcement.expiredAt) {
+      return false;
+    }
+
+    if (!announcement.expiresAt) {
+      return true;
+    }
+
+    const expiresAt = new Date(announcement.expiresAt).getTime();
+    return Number.isFinite(expiresAt) && expiresAt > Date.now();
+  }
+
+  function sanitizeAnnouncementExpiry(value, { allowEmpty = true } = {}) {
+    if (!value) {
+      if (allowEmpty) {
+        return null;
+      }
+      throw new Error('Announcement expiry is invalid.');
+    }
+
+    const timestamp = new Date(value).getTime();
+
+    if (!Number.isFinite(timestamp)) {
+      throw new Error('Announcement expiry is invalid.');
+    }
+
+    if (timestamp <= Date.now()) {
+      throw new Error('Announcement expiry must be in the future.');
+    }
+
+    return new Date(timestamp).toISOString();
   }
 
   function writeLater(task, label) {
@@ -1567,7 +1739,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
         CHAT_LIMITS.MAX_ANNOUNCEMENT_HISTORY_LOAD,
       );
       room.announcements = (announcements || []).map(serializeAnnouncement);
-      room.latestAnnouncement = room.announcements.find((announcement) => announcement.active) || null;
+      room.latestAnnouncement = room.announcements.find(isAnnouncementActive) || null;
     } catch (error) {
       console.warn(
         `Persisted announcements could not be loaded for ${room.roomId}; live room continues. ${
@@ -1847,8 +2019,54 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
       createdByName: announcement.createdByName || 'Nexus',
       createdAt: announcement.createdAt || new Date().toISOString(),
       pinnedUntil: announcement.pinnedUntil || null,
+      expiresAt: announcement.expiresAt || null,
+      updatedAt: announcement.updatedAt || null,
       active: announcement.active !== false,
       removedAt: announcement.removedAt || null,
+      expiredAt: announcement.expiredAt || null,
+    };
+  }
+
+  function serializePinnedMessage(pin = {}) {
+    if (!pin?.messageId) {
+      return null;
+    }
+
+    return {
+      messageId: String(pin.messageId || '').slice(0, 120),
+      roomId: String(pin.roomId || '').slice(0, 120),
+      senderName: sanitizeReplySnippet(pin.senderName || 'User'),
+      senderSessionId: String(pin.senderSessionId || '').slice(0, 120),
+      senderUserId: pin.senderUserId || null,
+      content: sanitizeReplySnippet(pin.content || ''),
+      messageType: sanitizeCategoryMessageType(pin.messageType || 'text'),
+      createdAt: pin.createdAt || null,
+      pinnedAt: pin.pinnedAt || new Date().toISOString(),
+      pinnedBySessionId: String(pin.pinnedBySessionId || '').slice(0, 120),
+      pinnedByUserId: pin.pinnedByUserId || null,
+      pinnedByName: sanitizeReplySnippet(pin.pinnedByName || 'Moderator'),
+    };
+  }
+
+  function toInvitePreview(room) {
+    const publicRoom = toPublicRoom(room);
+    return {
+      roomId: publicRoom.roomId,
+      inviteCode: publicRoom.inviteCode,
+      title: publicRoom.title,
+      type: publicRoom.type,
+      category: publicRoom.category,
+      categorySlug: publicRoom.categorySlug,
+      categoryLabel: publicRoom.categoryLabel,
+      categoryThemeClass: publicRoom.categoryThemeClass,
+      createdAt: publicRoom.createdAt,
+      expiresAt: publicRoom.expiresAt,
+      lastActiveAt: publicRoom.lastActiveAt,
+      memberCount: publicRoom.memberCount,
+      maxMembers: publicRoom.maxMembers,
+      isLocked: publicRoom.isLocked,
+      isExpired: publicRoom.isExpired,
+      deletedAt: publicRoom.deletedAt || null,
     };
   }
 
@@ -1994,12 +2212,14 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
     createAnnouncement,
     deleteRoom,
     deleteRoomAsAdmin,
+    expireAnnouncement,
     findReplyTarget,
     findOrLoadRoom,
     findRoom,
     getAdminOverview,
     getAdminRooms,
     getActiveSessionIds,
+    getInvitePreview,
     getMemberRecords,
     getNotificationMembers,
     getRoomActivity,
@@ -2017,6 +2237,7 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
     applyCommunityRole,
     muteUser,
     parseMentions,
+    pinMessage,
     prepareRoomHistory,
     publishScheduledAnnouncement,
     pruneStaleSockets,
@@ -2029,12 +2250,14 @@ export function createRoomService({ repositories = {}, entitlementService } = {}
     setRoomLocked,
     setMemberRole,
     setTyping,
+    unpinMessage,
     clearRecentMessages,
     softDeleteMessage,
     softDeleteMessageByRequester,
     toPublicRoom,
     toggleReaction,
     unbanUser,
+    updateAnnouncement,
     cleanupExpiredRooms,
     updateRoomRules,
     updateRoomTheme,
