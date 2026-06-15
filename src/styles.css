@@ -12920,6 +12920,29 @@ button.theme-toggle {
   position: relative !important;
 }
 
+.chat-shell.chat-shell--full {
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-width: 100vw !important;
+  padding-inline: clamp(0.5rem, 1.25vw, 1rem) !important;
+  width: 100vw !important;
+}
+
+.chat-shell.chat-shell--full .chat-panel {
+  border-radius: clamp(1rem, 2vw, 1.65rem) !important;
+}
+
+.chat-shell.chat-shell--full .side-panel {
+  display: none !important;
+}
+
+.chat-shell.chat-shell--full .messages .message.message--mine {
+  padding-left: clamp(2.5rem, 24vw, 24rem) !important;
+}
+
+.chat-shell.chat-shell--full .messages .message:not(.message--mine):not(.system-message) {
+  padding-right: clamp(2.5rem, 24vw, 24rem) !important;
+}
+
 .chat-header,
 .safety-banner,
 .announcement-banner,

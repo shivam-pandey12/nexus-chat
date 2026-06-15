@@ -61,6 +61,7 @@ export default function ChatRoom({
   const [highlightedMessageId, setHighlightedMessageId] = useState('');
   const [newTitle, setNewTitle] = useState(state?.room?.title || '');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [fullChatMode, setFullChatMode] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
   const [shownBlockedMessages, setShownBlockedMessages] = useState(() => new Set());
   const [safetyDismissed, setSafetyDismissed] = useState(() => localStorage.getItem(SAFETY_BANNER_KEY) === 'true');
@@ -187,6 +188,18 @@ export default function ChatRoom({
     jumpToMessage(pinnedMessage.messageId);
   }
 
+  function toggleFullChatMode() {
+    setFullChatMode((current) => {
+      const next = !current;
+
+      if (next) {
+        setDrawerOpen(false);
+      }
+
+      return next;
+    });
+  }
+
   if (!room) {
     return (
       <main className={cn('form-page', tw.page, 'flex min-h-[60vh] items-center justify-center')}>
@@ -288,11 +301,6 @@ export default function ChatRoom({
 
     if (!question || options.length < 2) {
       onToast?.('Polls need a question and at least two options.', 'error');
-      return;
-    }
-
-    if (!canModerate) {
-      onToast?.('Only the room owner or a moderator can create polls.', 'error');
       return;
     }
 
@@ -520,7 +528,7 @@ export default function ChatRoom({
   const mentionSuggestions = getMentionSuggestions(draft, users, profile.sessionId);
 
   return (
-    <main className={cn(`chat-shell premium-page room-theme--${room.themeId || 'classic'} ${roomCategory.accentClass} ${roomCategory.themeClass}`, tw.chatShell)}>
+    <main className={cn(`chat-shell premium-page room-theme--${room.themeId || 'classic'} ${roomCategory.accentClass} ${roomCategory.themeClass} ${fullChatMode ? 'chat-shell--full' : ''}`, tw.chatShell)}>
       <section className={cn('chat-panel', tw.chatPanel)}>
         <header className={cn('chat-header', tw.chatHeader)}>
           <div className="chat-header__identity min-w-0 space-y-2">
@@ -547,6 +555,9 @@ export default function ChatRoom({
             </button>
             <button className={cn('button button--ghost users-toggle', tw.buttonGhost, 'min-h-10 px-4 py-2')} type="button" onClick={() => setDrawerOpen(true)}>
               Room Info
+            </button>
+            <button className={cn('button button--ghost', tw.buttonGhost, 'min-h-10 px-4 py-2')} type="button" onClick={toggleFullChatMode}>
+              {fullChatMode ? 'Exit Full Chat' : 'Full Chat'}
             </button>
             <button className={cn('button button--soft', tw.buttonSoft, 'min-h-10 px-4 py-2')} type="button" onClick={copyInviteLink}>
               Copy Invite Link
@@ -709,7 +720,6 @@ export default function ChatRoom({
           )}
           <CategoryQuickTools
             room={room}
-            canModerate={canModerate}
             codeMode={codeMode}
             draft={draft}
             onToggleCodeMode={() => setCodeMode((current) => !current)}

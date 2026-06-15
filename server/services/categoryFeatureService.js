@@ -33,7 +33,6 @@ const MOD_TOOLS = new Set([
   'draft_pin',
   'hub_link_panel',
   'official_announcement',
-  'quick_poll',
 ]);
 
 const ADMIN_ONLY_TOOLS = new Set(['official_badge']);
@@ -46,6 +45,7 @@ const USER_CREATABLE_TOOLS = new Set([
   'priority_tag',
   'topic_spinner',
   'icebreaker_prompt',
+  'quick_poll',
   'room_event',
   'product_feedback',
 ]);

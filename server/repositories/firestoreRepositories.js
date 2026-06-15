@@ -662,10 +662,12 @@ function createCommunityRepository(db) {
     async listByOwner(ownerUserId, limit = CHAT_LIMITS.MAX_COMMUNITIES_LOAD) {
       const snapshot = await communities
         .where('ownerUserId', '==', ownerUserId)
-        .orderBy('createdAt', 'desc')
         .limit(Math.min(limit, CHAT_LIMITS.MAX_COMMUNITIES_LOAD))
         .get();
-      return snapshot.docs.map(readDoc).filter((community) => !community.deletedAt);
+      return snapshot.docs
+        .map(readDoc)
+        .filter((community) => !community.deletedAt)
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     },
 
     async get(communityId) {
