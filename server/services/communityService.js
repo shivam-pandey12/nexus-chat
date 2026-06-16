@@ -61,11 +61,31 @@ export function createCommunityService({ repositories = {}, entitlementService }
   const eventRsvps = new Map();
   const scheduledAnnouncements = new Map();
 
+  async function safeRepositoryRead(label, read, fallback) {
+    try {
+      if (typeof read !== 'function') {
+        return fallback;
+      }
+
+      const value = await read();
+      return value ?? fallback;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || 'Unknown error');
+      const safeMessage = message.replace(/https?:\/\/\S+/g, '[link]').slice(0, 220);
+      console.warn(`Community persistence read skipped (${label}): ${safeMessage}`);
+      return fallback;
+    }
+  }
+
   async function initializeFromPersistence() {
     const [persistedCommunities, persistedEvents, persistedScheduled] = await Promise.all([
-      communityRepository.listActive?.(CHAT_LIMITS.MAX_COMMUNITIES_LOAD),
-      eventRepository.listRecent?.(CHAT_LIMITS.MAX_EVENTS_LOAD),
-      scheduledAnnouncementRepository.listRecent?.(CHAT_LIMITS.MAX_SCHEDULED_ANNOUNCEMENTS_LOAD),
+      safeRepositoryRead('communities bootstrap', () => communityRepository.listActive?.(CHAT_LIMITS.MAX_COMMUNITIES_LOAD), []),
+      safeRepositoryRead('events bootstrap', () => eventRepository.listRecent?.(CHAT_LIMITS.MAX_EVENTS_LOAD), []),
+      safeRepositoryRead(
+        'scheduled announcements bootstrap',
+        () => scheduledAnnouncementRepository.listRecent?.(CHAT_LIMITS.MAX_SCHEDULED_ANNOUNCEMENTS_LOAD),
+        [],
+      ),
     ]);
 
     for (const community of persistedCommunities || []) {
@@ -88,7 +108,11 @@ export function createCommunityService({ repositories = {}, entitlementService }
   }
 
   async function listCommunities(filters = {}) {
-    const persisted = await communityRepository.listActive?.(CHAT_LIMITS.MAX_COMMUNITIES_LOAD);
+    const persisted = await safeRepositoryRead(
+      'communities list',
+      () => communityRepository.listActive?.(CHAT_LIMITS.MAX_COMMUNITIES_LOAD),
+      [],
+    );
     hydrateCommunities(communities, persisted);
     const query = String(filters.search || '').trim().toLowerCase();
     const category = filters.category && filters.category !== 'All' ? getCategorySlug(filters.category) : '';
@@ -126,14 +150,26 @@ export function createCommunityService({ repositories = {}, entitlementService }
       throw new Error('This community is private.');
     }
 
+    const [rooms, eventList, announcements, activity, memberList] = await Promise.all([
+      safeRepositoryRead('community rooms', () => listCommunityRooms(community.communityId), []),
+      safeRepositoryRead(
+        'community events',
+        () => listEvents({ communityId: community.communityId, includePrivate: Boolean(membership) }),
+        [],
+      ),
+      safeRepositoryRead('community announcements', () => listCommunityAnnouncements(community.communityId), []),
+      safeRepositoryRead('community activity', () => listCommunityActivity(community.communityId), []),
+      canManage ? safeRepositoryRead('community members', () => listMembers(community.communityId, viewer), []) : Promise.resolve([]),
+    ]);
+
     return {
       community: toPublicCommunity(community),
       membership: membership ? serializeMember(membership) : null,
-      rooms: await listCommunityRooms(community.communityId),
-      events: await listEvents({ communityId: community.communityId, includePrivate: Boolean(membership) }),
-      announcements: await listCommunityAnnouncements(community.communityId),
-      activity: await listCommunityActivity(community.communityId),
-      members: canManage ? await listMembers(community.communityId, viewer) : [],
+      rooms,
+      events: eventList,
+      announcements,
+      activity,
+      members: memberList,
       analytics: canManage ? await getCommunityAnalytics(community.communityId) : null,
     };
   }
@@ -338,7 +374,11 @@ export function createCommunityService({ repositories = {}, entitlementService }
       throw new Error('This community is private.');
     }
 
-    const members = await communityMemberRepository.listByCommunity?.(community.communityId, CHAT_LIMITS.MAX_COMMUNITY_MEMBERS_LOAD);
+    const members = await safeRepositoryRead(
+      'community member list',
+      () => communityMemberRepository.listByCommunity?.(community.communityId, CHAT_LIMITS.MAX_COMMUNITY_MEMBERS_LOAD),
+      [],
+    );
     const memoryMembers = [...(communityMembers.get(community.communityId)?.values() || [])];
     return dedupeById([...(members || []), ...memoryMembers], 'memberId')
       .slice(0, CHAT_LIMITS.MAX_COMMUNITY_MEMBERS_LOAD)
@@ -578,8 +618,12 @@ export function createCommunityService({ repositories = {}, entitlementService }
 
   async function listEvents(filters = {}) {
     const persisted = filters.communityId
-      ? await eventRepository.listByCommunity?.(filters.communityId, CHAT_LIMITS.MAX_EVENTS_LOAD)
-      : await eventRepository.listRecent?.(CHAT_LIMITS.MAX_EVENTS_LOAD);
+      ? await safeRepositoryRead(
+          'community event list',
+          () => eventRepository.listByCommunity?.(filters.communityId, CHAT_LIMITS.MAX_EVENTS_LOAD),
+          [],
+        )
+      : await safeRepositoryRead('event list', () => eventRepository.listRecent?.(CHAT_LIMITS.MAX_EVENTS_LOAD), []);
     hydrateEvents(events, persisted);
     return [...events.values()]
       .filter((event) => !filters.communityId || event.communityId === filters.communityId)
@@ -867,10 +911,10 @@ export function createCommunityService({ repositories = {}, entitlementService }
 
   async function getAdminOverview() {
     const [communityList, eventList, scheduledList, activity] = await Promise.all([
-      communityRepository.listActive?.(100),
-      eventRepository.listRecent?.(100),
-      scheduledAnnouncementRepository.listRecent?.(100),
-      communityActivityRepository.listRecent?.(100),
+      safeRepositoryRead('admin community list', () => communityRepository.listActive?.(100), []),
+      safeRepositoryRead('admin event list', () => eventRepository.listRecent?.(100), []),
+      safeRepositoryRead('admin scheduled announcement list', () => scheduledAnnouncementRepository.listRecent?.(100), []),
+      safeRepositoryRead('admin community activity list', () => communityActivityRepository.listRecent?.(100), []),
     ]);
     hydrateCommunities(communities, communityList);
     hydrateEvents(events, eventList);
@@ -897,9 +941,13 @@ export function createCommunityService({ repositories = {}, entitlementService }
 
   async function listCommunityActivity(communityId) {
     const community = await requireCommunity(communityId);
-    const activity = await communityActivityRepository.listByCommunity?.(
-      community.communityId,
-      CHAT_LIMITS.MAX_COMMUNITY_ACTIVITY_LOAD,
+    const activity = await safeRepositoryRead(
+      'community activity list',
+      () => communityActivityRepository.listByCommunity?.(
+        community.communityId,
+        CHAT_LIMITS.MAX_COMMUNITY_ACTIVITY_LOAD,
+      ),
+      [],
     );
     const memoryActivity = communityActivities.get(community.communityId) || [];
     return dedupeById([...(activity || []), ...memoryActivity], 'activityId')
@@ -910,9 +958,13 @@ export function createCommunityService({ repositories = {}, entitlementService }
 
   async function listCommunityAnnouncements(communityId) {
     const community = await requireCommunity(communityId);
-    const announcements = await communityAnnouncementRepository.listRecent?.(
-      community.communityId,
-      CHAT_LIMITS.MAX_COMMUNITY_ANNOUNCEMENTS_LOAD,
+    const announcements = await safeRepositoryRead(
+      'community announcement list',
+      () => communityAnnouncementRepository.listRecent?.(
+        community.communityId,
+        CHAT_LIMITS.MAX_COMMUNITY_ANNOUNCEMENTS_LOAD,
+      ),
+      [],
     );
     const memoryAnnouncements = [...(communityAnnouncements.get(community.communityId)?.values() || [])];
     return dedupeById([...(announcements || []), ...memoryAnnouncements], 'announcementId')
@@ -1024,7 +1076,9 @@ export function createCommunityService({ repositories = {}, entitlementService }
       return byMemory;
     }
 
-    const persisted = (await communityRepository.get?.(text)) || (await communityRepository.findBySlug?.(text));
+    const persisted =
+      (await safeRepositoryRead('community lookup by id', () => communityRepository.get?.(text), null)) ||
+      (await safeRepositoryRead('community lookup by slug', () => communityRepository.findBySlug?.(text), null));
 
     if (!persisted?.communityId) {
       return null;
@@ -1159,14 +1213,19 @@ export function createCommunityService({ repositories = {}, entitlementService }
   }
 
   async function countOwnedCommunities(userId) {
-    const persisted = await communityRepository.listByOwner?.(userId, CHAT_LIMITS.MAX_COMMUNITIES_LOAD);
+    const persisted = await safeRepositoryRead(
+      'owned community count',
+      () => communityRepository.listByOwner?.(userId, CHAT_LIMITS.MAX_COMMUNITIES_LOAD),
+      [],
+    );
     hydrateCommunities(communities, persisted);
     return [...communities.values()].filter((community) => community.ownerUserId === userId && !community.deletedAt).length;
   }
 
   async function isSlugTaken(slug) {
     const fromMemory = [...communities.values()].some((community) => community.slug === slug && !community.deletedAt);
-    return fromMemory || Boolean(await communityRepository.findBySlug?.(slug));
+    const persisted = await safeRepositoryRead('community slug check', () => communityRepository.findBySlug?.(slug), null);
+    return fromMemory || Boolean(persisted);
   }
 
   async function getLimits(userId) {
