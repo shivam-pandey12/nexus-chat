@@ -44,6 +44,7 @@ import {
   createFeedback,
   createReport,
   createScheduledAnnouncement,
+  deleteCommunity,
   fetchCommunities,
   fetchCommunity,
   fetchEvents,
@@ -1685,6 +1686,29 @@ export default function App() {
     }
   }
 
+  function handleDeleteCommunity() {
+    const community = communityDetails?.community;
+
+    if (!community?.communityId) {
+      return;
+    }
+
+    requestConfirmation({
+      eyebrow: 'Community owner action',
+      title: `Delete ${community.name}?`,
+      body: 'This will close the community and hide it from discovery. Existing linked rooms may still need to be closed separately if they are active.',
+      confirmLabel: 'Delete Community',
+      tone: 'danger',
+      onConfirm: async () => {
+        await deleteCommunity(authToken, profile.sessionId, community.communityId);
+        setCommunityDetails(null);
+        setView('communities');
+        await loadCommunities();
+        addToast('Community deleted');
+      },
+    });
+  }
+
   async function handleCommunityRoleChange(member, role) {
     try {
       await updateCommunityRole(authToken, profile.sessionId, communityDetails.community.communityId, member.memberId, role);
@@ -2375,6 +2399,7 @@ export default function App() {
         onSave={handleCommunitySettingsSave}
         onRoleChange={handleCommunityRoleChange}
         onBanMember={handleCommunityBan}
+        onDeleteCommunity={handleDeleteCommunity}
       />
     );
   } else if (view === 'event-editor') {

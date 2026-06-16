@@ -14311,3 +14311,298 @@ button.theme-toggle {
     max-width: 4.6rem;
   }
 }
+
+/* Dedicated community and room-card polish.
+   This late layer separates community surfaces from the older generic card wash. */
+.community-card,
+.room-card {
+  background:
+    radial-gradient(circle at 0 0, hsl(39 58% 64% / 0.14), transparent 18rem),
+    linear-gradient(145deg, hsl(42 58% 98% / 0.98), hsl(0 0% 100% / 0.96) 52%, hsl(214 45% 97% / 0.9)) !important;
+  border-color: hsl(39 43% 73% / 0.58) !important;
+  box-shadow:
+    0 1.2rem 3.4rem hsl(34 38% 22% / 0.08),
+    inset 0 1px 0 hsl(0 0% 100% / 0.72) !important;
+}
+
+.community-card::before,
+.room-card::before {
+  background:
+    linear-gradient(90deg, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.12), transparent 46%),
+    radial-gradient(circle at 88% 12%, hsl(214 55% 74% / 0.16), transparent 18rem) !important;
+  opacity: 1 !important;
+}
+
+.community-card .community-cover {
+  background:
+    linear-gradient(135deg, hsl(39 58% 76% / 0.58), hsl(44 52% 95% / 0.86) 42%, hsl(214 44% 93% / 0.92)),
+    radial-gradient(circle at 82% 18%, hsl(0 0% 100% / 0.58), transparent 22rem) !important;
+  border-color: hsl(39 44% 69% / 0.7) !important;
+  border-radius: 1.5rem !important;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.72),
+    0 0.8rem 2rem hsl(34 34% 22% / 0.08) !important;
+  min-height: clamp(7.6rem, 12vw, 10rem) !important;
+  overflow: hidden;
+}
+
+.community-card .community-cover::before {
+  background:
+    linear-gradient(90deg, hsl(39 48% 47% / 0.22), transparent 42%),
+    repeating-linear-gradient(90deg, hsl(39 38% 72% / 0.14) 0 1px, transparent 1px 4rem);
+  content: '';
+  inset: 0;
+  opacity: 0.85;
+  pointer-events: none;
+  position: absolute;
+}
+
+.community-cover span {
+  background:
+    linear-gradient(145deg, hsl(43 64% 91% / 0.94), hsl(0 0% 100% / 0.82)) !important;
+  border-color: hsl(39 42% 68% / 0.82) !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 0.65rem 1.5rem hsl(34 30% 20% / 0.1),
+    inset 0 1px 0 hsl(0 0% 100% / 0.8) !important;
+  color: hsl(224 28% 14%) !important;
+  font-size: clamp(0.78rem, 0.72rem + 0.25vw, 0.98rem) !important;
+  height: 3.35rem !important;
+  left: 1rem !important;
+  min-width: 3.35rem;
+  padding: 0 0.85rem;
+  text-transform: none;
+  width: auto !important;
+  z-index: 2;
+}
+
+.community-home .community-hero,
+.event-lobby .community-hero {
+  background:
+    radial-gradient(circle at 10% 8%, hsl(39 55% 65% / 0.16), transparent 20rem),
+    radial-gradient(circle at 94% 8%, hsl(214 50% 74% / 0.16), transparent 22rem),
+    linear-gradient(145deg, hsl(42 61% 98% / 0.98), hsl(0 0% 100% / 0.96) 54%, hsl(44 42% 96% / 0.94)) !important;
+  border-color: hsl(39 42% 71% / 0.62) !important;
+  box-shadow:
+    0 1.4rem 4rem hsl(34 36% 22% / 0.09),
+    inset 0 1px 0 hsl(0 0% 100% / 0.78) !important;
+}
+
+.community-hero::before {
+  background: linear-gradient(90deg, transparent, hsl(39 52% 52% / 0.55), transparent) !important;
+  left: 2rem !important;
+  right: 2rem !important;
+}
+
+.community-avatar {
+  background:
+    linear-gradient(145deg, hsl(43 65% 86%), hsl(39 56% 58%)) !important;
+  border-color: hsl(39 46% 62% / 0.8) !important;
+  box-shadow:
+    0 1rem 2.5rem hsl(38 45% 33% / 0.18),
+    inset 0 1px 0 hsl(0 0% 100% / 0.55) !important;
+  color: hsl(224 28% 14%) !important;
+}
+
+.saved-room--structured,
+.community-room-card {
+  background:
+    radial-gradient(circle at 0 0, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.12), transparent 18rem),
+    linear-gradient(135deg, hsl(42 60% 98% / 0.98), hsl(0 0% 100% / 0.98) 50%, hsl(43 45% 96% / 0.9)) !important;
+  border-color: hsl(39 41% 73% / 0.7) !important;
+  border-radius: clamp(1.35rem, 1rem + 1.2vw, 2rem) !important;
+  box-shadow:
+    0 1.05rem 3rem hsl(34 34% 22% / 0.08),
+    inset 0 1px 0 hsl(0 0% 100% / 0.76) !important;
+  padding: clamp(1.25rem, 1rem + 1vw, 1.8rem) !important;
+}
+
+.saved-room--structured::before,
+.community-room-card::before {
+  background:
+    radial-gradient(circle at 9% 18%, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.16), transparent 13rem),
+    linear-gradient(90deg, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.11), transparent 46%) !important;
+  opacity: 1 !important;
+}
+
+.saved-room--structured::after,
+.community-room-card::after {
+  background: linear-gradient(180deg, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.9), hsl(39 52% 50% / 0.22));
+  border-radius: 999px;
+  content: '';
+  inset: 1.15rem auto 1.15rem 0.9rem;
+  opacity: 0.58;
+  position: absolute;
+  width: 0.22rem;
+}
+
+.saved-room__title-row > strong,
+.community-room-card strong {
+  color: hsl(224 28% 14%) !important;
+  letter-spacing: -0.01em;
+}
+
+.saved-room__date,
+.saved-room__preview,
+.saved-room__announcement,
+.community-room-card .saved-room__preview {
+  color: hsl(226 14% 39%) !important;
+}
+
+.saved-room__meta > span,
+.community-room-card .saved-room__meta > span {
+  background: hsl(42 55% 98% / 0.82) !important;
+  border-color: hsl(39 41% 75% / 0.72) !important;
+  color: hsl(226 16% 38%) !important;
+}
+
+.community-room-card .button,
+.saved-room__actions .button,
+.saved-room__actions .favorite-button {
+  box-shadow: 0 0.9rem 2rem hsl(34 34% 22% / 0.08);
+}
+
+.community-danger-zone {
+  align-items: center;
+  background:
+    radial-gradient(circle at 0 0, hsl(0 72% 54% / 0.08), transparent 16rem),
+    linear-gradient(145deg, hsl(0 60% 98% / 0.9), hsl(42 58% 98% / 0.92)) !important;
+  border-color: hsl(0 56% 67% / 0.42) !important;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.community-danger-zone h2 {
+  color: hsl(0 48% 35%);
+}
+
+:root[data-theme='dark'] .community-card,
+:root[data-theme='dark'] .room-card {
+  background:
+    radial-gradient(circle at 0 0, hsl(39 64% 58% / 0.09), transparent 18rem),
+    radial-gradient(circle at 100% 0, hsl(211 68% 70% / 0.08), transparent 18rem),
+    linear-gradient(145deg, hsl(224 27% 14% / 0.98), hsl(224 24% 10% / 0.98) 58%, hsl(220 24% 12% / 0.96)) !important;
+  border-color: hsl(42 34% 78% / 0.13) !important;
+  box-shadow:
+    0 1.25rem 3.4rem hsl(220 60% 4% / 0.34),
+    inset 0 1px 0 hsl(0 0% 100% / 0.06) !important;
+}
+
+:root[data-theme='dark'] .community-card::before,
+:root[data-theme='dark'] .room-card::before {
+  background:
+    linear-gradient(90deg, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.12), transparent 48%),
+    radial-gradient(circle at 88% 12%, hsl(211 68% 70% / 0.1), transparent 18rem) !important;
+}
+
+:root[data-theme='dark'] .community-card .community-cover {
+  background:
+    linear-gradient(135deg, hsl(224 26% 18% / 0.96), hsl(224 25% 11% / 0.96) 48%, hsl(214 34% 17% / 0.94)),
+    radial-gradient(circle at 82% 18%, hsl(211 68% 70% / 0.12), transparent 20rem) !important;
+  border-color: hsl(42 34% 78% / 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.06),
+    0 0.8rem 2.1rem hsl(220 60% 4% / 0.24) !important;
+}
+
+:root[data-theme='dark'] .community-cover span {
+  background:
+    linear-gradient(145deg, hsl(224 24% 18% / 0.98), hsl(224 24% 12% / 0.98)) !important;
+  border-color: hsl(42 34% 78% / 0.18) !important;
+  box-shadow:
+    0 0.65rem 1.5rem hsl(220 60% 4% / 0.28),
+    inset 0 1px 0 hsl(0 0% 100% / 0.07) !important;
+  color: hsl(44 45% 91%) !important;
+}
+
+:root[data-theme='dark'] .community-home .community-hero,
+:root[data-theme='dark'] .event-lobby .community-hero {
+  background:
+    radial-gradient(circle at 10% 8%, hsl(39 64% 58% / 0.1), transparent 20rem),
+    radial-gradient(circle at 94% 8%, hsl(211 68% 70% / 0.1), transparent 22rem),
+    linear-gradient(145deg, hsl(224 27% 14% / 0.98), hsl(224 24% 10% / 0.98) 56%, hsl(220 24% 12% / 0.98)) !important;
+  border-color: hsl(42 34% 78% / 0.14) !important;
+  box-shadow:
+    0 1.4rem 4rem hsl(220 60% 4% / 0.36),
+    inset 0 1px 0 hsl(0 0% 100% / 0.06) !important;
+}
+
+:root[data-theme='dark'] .community-avatar {
+  background:
+    linear-gradient(145deg, hsl(39 58% 58%), hsl(38 42% 38%)) !important;
+  border-color: hsl(42 34% 78% / 0.2) !important;
+  box-shadow:
+    0 1rem 2.5rem hsl(220 60% 4% / 0.34),
+    inset 0 1px 0 hsl(0 0% 100% / 0.12) !important;
+  color: hsl(44 56% 94%) !important;
+}
+
+:root[data-theme='dark'] .saved-room--structured,
+:root[data-theme='dark'] .community-room-card {
+  background:
+    radial-gradient(circle at 0 0, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.11), transparent 18rem),
+    linear-gradient(135deg, hsl(224 26% 15% / 0.98), hsl(224 24% 10% / 0.98) 54%, hsl(220 24% 12% / 0.96)) !important;
+  border-color: hsl(42 34% 78% / 0.15) !important;
+  box-shadow:
+    0 1.05rem 3rem hsl(220 60% 4% / 0.32),
+    inset 0 1px 0 hsl(0 0% 100% / 0.06) !important;
+}
+
+:root[data-theme='dark'] .saved-room--structured::before,
+:root[data-theme='dark'] .community-room-card::before {
+  background:
+    radial-gradient(circle at 9% 18%, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.12), transparent 13rem),
+    linear-gradient(90deg, hsl(var(--category-accent-hsl, var(--accent-hsl)) / 0.08), transparent 46%) !important;
+}
+
+:root[data-theme='dark'] .saved-room__title-row > strong,
+:root[data-theme='dark'] .community-room-card strong {
+  color: hsl(44 45% 93%) !important;
+}
+
+:root[data-theme='dark'] .saved-room__date,
+:root[data-theme='dark'] .saved-room__preview,
+:root[data-theme='dark'] .saved-room__announcement,
+:root[data-theme='dark'] .community-room-card .saved-room__preview {
+  color: hsl(43 26% 79% / 0.78) !important;
+}
+
+:root[data-theme='dark'] .saved-room__meta > span,
+:root[data-theme='dark'] .community-room-card .saved-room__meta > span {
+  background: hsl(224 24% 18% / 0.84) !important;
+  border-color: hsl(42 34% 78% / 0.16) !important;
+  color: hsl(43 26% 84% / 0.82) !important;
+}
+
+:root[data-theme='dark'] .community-danger-zone {
+  background:
+    radial-gradient(circle at 0 0, hsl(0 72% 56% / 0.12), transparent 16rem),
+    linear-gradient(145deg, hsl(224 25% 13% / 0.98), hsl(224 24% 10% / 0.96)) !important;
+  border-color: hsl(0 56% 67% / 0.28) !important;
+}
+
+:root[data-theme='dark'] .community-danger-zone h2 {
+  color: hsl(0 64% 78%);
+}
+
+@media (max-width: 760px) {
+  .community-card .community-cover {
+    min-height: 6.4rem !important;
+  }
+
+  .community-cover span {
+    height: 2.85rem !important;
+    min-width: 2.85rem;
+  }
+
+  .community-home .community-hero,
+  .event-lobby .community-hero {
+    gap: 1rem !important;
+  }
+
+  .community-danger-zone {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

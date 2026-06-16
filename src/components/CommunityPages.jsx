@@ -270,15 +270,27 @@ export function CommunityHome({
           </div>
           {(details.rooms || []).length === 0 ? <p className="muted">No community rooms yet.</p> : (
             <div className="saved-room-list">
-              {details.rooms.map((room) => (
-                <article className="saved-room" key={room.roomId}>
-                  <div>
-                    <strong>{room.title}</strong>
-                    <span><CategoryBadge category={room.categorySlug || room.category} compact /> · {room.type} {room.roomPurpose ? `· ${room.roomPurpose}` : ''}</span>
+              {details.rooms.map((room) => {
+                const roomCategory = getCategoryConfig(room.categorySlug || room.category);
+                return (
+                <article className={cn(`saved-room saved-room--structured community-room-card ${roomCategory.accentClass}`, 'community-room-card--room')} key={room.roomId}>
+                  <div className="saved-room__body">
+                    <div className="saved-room__title-row">
+                      <strong>{room.title}</strong>
+                    </div>
+                    <div className="saved-room__meta">
+                      <CategoryBadge category={roomCategory.slug} compact />
+                      <span>{room.type || 'room'}</span>
+                      {room.roomPurpose && <span>{room.roomPurpose}</span>}
+                    </div>
+                    {room.latestMessagePreview && <p className="saved-room__preview">{room.latestMessagePreview}</p>}
                   </div>
-                  <button className="button button--small" type="button" onClick={() => onOpenRoom(room)}>Join</button>
+                  <div className="saved-room__actions">
+                    <button className="button button--small" type="button" onClick={() => onOpenRoom(room)}>Join</button>
+                  </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -291,13 +303,20 @@ export function CommunityHome({
           {(details.events || []).length === 0 ? <p className="muted">No events scheduled.</p> : (
             <div className="saved-room-list">
               {details.events.map((event) => (
-                <article className="saved-room event-card" key={event.eventId}>
-                  <div>
-                    <strong>{event.title}</strong>
-                    <span>{event.status} · {formatDate(event.startsAt)}</span>
-                    <small>{event.description}</small>
+                <article className="saved-room saved-room--structured community-room-card community-room-card--event event-card" key={event.eventId}>
+                  <div className="saved-room__body">
+                    <div className="saved-room__title-row">
+                      <strong>{event.title}</strong>
+                    </div>
+                    <div className="saved-room__meta">
+                      <span>{event.status}</span>
+                      <span>{formatDate(event.startsAt)}</span>
+                    </div>
+                    {event.description && <p className="saved-room__preview">{event.description}</p>}
                   </div>
-                  <button className="button button--small" type="button" onClick={() => onOpenEvent(event)}>Open</button>
+                  <div className="saved-room__actions">
+                    <button className="button button--small" type="button" onClick={() => onOpenEvent(event)}>Open</button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -326,8 +345,9 @@ export function CommunityHome({
   );
 }
 
-export function CommunitySettings({ details, onBack, onSave, onRoleChange, onBanMember }) {
+export function CommunitySettings({ details, onBack, onSave, onRoleChange, onBanMember, onDeleteCommunity }) {
   const community = details?.community;
+  const membership = details?.membership;
   const [name, setName] = useState(community?.name || '');
   const [description, setDescription] = useState(community?.description || '');
   const [rules, setRules] = useState(community?.rules || '');
@@ -371,6 +391,20 @@ export function CommunitySettings({ details, onBack, onSave, onRoleChange, onBan
             </div>
           ))}
         </section>
+        {membership?.role === 'owner' && (
+          <section className="form-group-card community-danger-zone">
+            <div>
+              <p className="eyebrow">Owner danger zone</p>
+              <h2>Delete community</h2>
+              <p className="muted">
+                Close this community and remove it from discovery. This action needs confirmation.
+              </p>
+            </div>
+            <button className="button button--danger" type="button" onClick={onDeleteCommunity}>
+              Delete Community
+            </button>
+          </section>
+        )}
         <div className="form-actions">
           <button className="button button--ghost" type="button" onClick={onBack}>Back</button>
           <button className="button button--primary" type="submit">Save Settings</button>
