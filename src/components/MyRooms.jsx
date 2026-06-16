@@ -66,24 +66,30 @@ function RoomShelf({ title, items, empty, onJoin, onToggleFavorite }) {
       ) : (
         <div className="saved-room-list">
           {items.map((relationship) => (
-            <article className={cn(`saved-room room-theme--${relationship.room.themeId || 'classic'} ${getCategoryConfig(relationship.room.categorySlug || relationship.room.category).accentClass}`, tw.cardCompact, 'grid gap-4 sm:grid-cols-[1fr_auto]')} key={`${title}_${relationship.roomId}`}>
-              <div>
-                <strong>{relationship.room.title}</strong>
-                <span>
-                  <CategoryBadge category={relationship.room.categorySlug || relationship.room.category} compact /> · {relationship.role} · {relationship.room.type || 'room'}
-                  {relationship.room.communityName ? ` · ${relationship.room.communityName}` : ''}
-                </span>
-                <small>{formatVisited(relationship.lastVisitedAt)}{relationship.room.expiresAt ? ` · ${formatExpiry(relationship.room.expiresAt)}` : ''}</small>
-                {(relationship.unreadCount || 0) > 0 && <em className="unread-badge">{relationship.unreadCount} unread</em>}
-                {(relationship.latestMessagePreview || relationship.room.latestMessagePreview) && (
-                  <p className="saved-room__preview">{relationship.latestMessagePreview || relationship.room.latestMessagePreview}</p>
-                )}
-                {(relationship.latestAnnouncement || relationship.room.latestAnnouncement) && (
-                  <p className="saved-room__announcement">
-                    Announcement: {(relationship.latestAnnouncement || relationship.room.latestAnnouncement).title}
-                  </p>
-                )}
-                {relationship.notificationsMuted && <small>Notifications muted</small>}
+            <article className={cn(`saved-room saved-room--structured room-theme--${relationship.room.themeId || 'classic'} ${getCategoryConfig(relationship.room.categorySlug || relationship.room.category).accentClass}`, tw.cardCompact)} key={`${title}_${relationship.roomId}`}>
+              <div className="saved-room__body">
+                <div className="saved-room__title-row">
+                  <strong>{relationship.room.title}</strong>
+                  {(relationship.unreadCount || 0) > 0 && <em className="unread-badge">{relationship.unreadCount} unread</em>}
+                </div>
+                <div className="saved-room__meta">
+                  <CategoryBadge category={relationship.room.categorySlug || relationship.room.category} compact />
+                  <span>{relationship.role}</span>
+                  <span>{relationship.room.type || 'room'}</span>
+                  {relationship.room.communityName && <span>{relationship.room.communityName}</span>}
+                </div>
+                <small className="saved-room__date">{formatVisited(relationship.lastVisitedAt)}{relationship.room.expiresAt ? ` · ${formatExpiry(relationship.room.expiresAt)}` : ''}</small>
+                <div className="saved-room__activity">
+                  {(relationship.latestMessagePreview || relationship.room.latestMessagePreview) && (
+                    <p className="saved-room__preview">{relationship.latestMessagePreview || relationship.room.latestMessagePreview}</p>
+                  )}
+                  {(relationship.latestAnnouncement || relationship.room.latestAnnouncement) && (
+                    <p className="saved-room__announcement">
+                      Announcement: {(relationship.latestAnnouncement || relationship.room.latestAnnouncement).title}
+                    </p>
+                  )}
+                  {relationship.notificationsMuted && <small>Notifications muted</small>}
+                </div>
               </div>
               <div className="saved-room__actions">
                 <button

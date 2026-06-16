@@ -13952,3 +13952,362 @@ button.theme-toggle {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* Final mobile/dark UI QA: keep navigation reachable, controls themed, and room cards structured. */
+.topbar {
+  overflow: visible !important;
+}
+
+.topbar .brand__mark,
+.topbar-profile-cluster,
+.topbar__quick-actions > .account-button,
+.notification-trigger,
+.theme-toggle {
+  flex: 0 0 auto;
+}
+
+.topbar .brand__mark img,
+.account-avatar img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.topbar .brand__copy,
+.account-button__copy {
+  min-width: 0;
+}
+
+.topbar .brand__copy strong,
+.account-button__copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-room--structured {
+  align-items: stretch !important;
+  display: grid !important;
+  gap: clamp(1rem, 0.85rem + 0.8vw, 1.35rem) !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  min-height: auto !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.saved-room--structured::before {
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--room-accent, var(--accent-strong)), transparent 70%), transparent 34%),
+    linear-gradient(90deg, color-mix(in srgb, var(--room-accent, var(--accent-strong)), transparent 86%), transparent 60%);
+  content: '';
+  inset: 0;
+  opacity: 0.78;
+  pointer-events: none;
+  position: absolute;
+}
+
+.saved-room--structured > * {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.saved-room__body {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.saved-room__title-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.saved-room__title-row > strong {
+  color: var(--text);
+  font-size: clamp(1.05rem, 0.98rem + 0.35vw, 1.35rem);
+  font-weight: 850;
+  line-height: 1.12;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.saved-room__meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.saved-room__meta > span {
+  align-items: center;
+  background: hsl(var(--surface-strong-hsl) / 0.62);
+  border: 1px solid hsl(var(--border-hsl) / 0.58);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex !important;
+  font-size: 0.78rem;
+  font-weight: 760;
+  line-height: 1;
+  min-height: 1.85rem;
+  padding: 0 0.65rem;
+  width: auto;
+}
+
+.saved-room__meta .category-badge,
+.saved-room__meta .category-chip,
+.saved-room__meta .pill {
+  margin: 0 !important;
+  min-height: 1.85rem !important;
+  white-space: nowrap;
+}
+
+.saved-room__date {
+  color: var(--muted) !important;
+  font-size: 0.82rem !important;
+  margin-top: 0 !important;
+}
+
+.saved-room__activity {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.saved-room__preview,
+.saved-room__announcement {
+  color: var(--text-soft);
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.saved-room__announcement {
+  background: hsl(var(--accent-hsl) / 0.09);
+  border: 1px solid hsl(var(--accent-hsl) / 0.18);
+  border-radius: 1rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.saved-room__actions {
+  align-content: center;
+  align-items: center !important;
+  display: flex !important;
+  flex-wrap: nowrap;
+  gap: 0.7rem !important;
+  justify-content: flex-end;
+}
+
+.saved-room__actions .favorite-button,
+.saved-room__actions .button {
+  min-height: 2.85rem;
+  white-space: nowrap;
+}
+
+:root[data-theme='dark'] .saved-room--structured {
+  background:
+    linear-gradient(145deg, hsl(var(--surface-strong-hsl) / 0.92), hsl(var(--surface-hsl) / 0.82)) !important;
+  border-color: hsl(var(--border-hsl) / 0.86) !important;
+  box-shadow: 0 1.2rem 3.2rem hsl(220 55% 4% / 0.22) !important;
+}
+
+:root[data-theme='dark'] .saved-room__meta > span,
+:root[data-theme='dark'] .saved-room__announcement {
+  background: hsl(220 24% 16% / 0.88);
+  border-color: hsl(var(--border-hsl) / 0.7);
+}
+
+@media (max-width: 1240px) {
+  .topbar {
+    align-items: center !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.65rem !important;
+    padding: 0.7rem max(0.75rem, env(safe-area-inset-right)) 0.8rem max(0.75rem, env(safe-area-inset-left)) !important;
+  }
+
+  .topbar .brand {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  .topbar__quick-actions {
+    flex: 0 0 auto !important;
+    gap: 0.45rem !important;
+    margin-left: auto !important;
+  }
+
+  .topbar-dropdowns,
+  .topbar-nav-groups {
+    display: flex !important;
+    flex: 0 0 100% !important;
+    gap: 0.45rem !important;
+    justify-content: flex-start !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    order: 5;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    padding: 0.15rem 0 0.1rem !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .topbar-dropdowns::-webkit-scrollbar,
+  .topbar-nav-groups::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topbar-dropdown {
+    position: static !important;
+  }
+
+  .topbar-dropdown__trigger {
+    border: 1px solid hsl(var(--border-hsl) / 0.62) !important;
+    border-radius: 999px !important;
+    flex: 0 0 auto !important;
+    min-height: 2.65rem !important;
+    padding: 0.45rem 0.72rem !important;
+  }
+
+  .topbar-dropdown__trigger-icon {
+    height: 1.7rem;
+    width: 1.7rem;
+  }
+
+  .topbar-dropdown__stage {
+    left: 0.75rem !important;
+    max-width: calc(100vw - 1.5rem) !important;
+    min-width: 0 !important;
+    position: fixed !important;
+    top: calc(7.8rem + env(safe-area-inset-top)) !important;
+    transform: none !important;
+    width: min(24rem, calc(100vw - 1.5rem)) !important;
+    z-index: 130 !important;
+  }
+
+  .topbar-dropdown__panel {
+    max-height: min(70dvh, 34rem);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    min-height: auto !important;
+    position: sticky !important;
+  }
+
+  .topbar .brand__copy {
+    display: inline-grid !important;
+  }
+
+  .topbar .brand__copy strong {
+    font-size: 0.98rem !important;
+  }
+
+  .topbar .brand__copy em {
+    font-size: 0.64rem !important;
+  }
+
+  .topbar .brand__mark {
+    height: 2.8rem !important;
+    width: 2.8rem !important;
+  }
+
+  .notification-trigger,
+  .topbar .theme-toggle.icon-button,
+  .theme-toggle.icon-button,
+  button.theme-toggle {
+    height: 2.85rem !important;
+    min-height: 2.85rem !important;
+    min-width: 2.85rem !important;
+    width: 2.85rem !important;
+  }
+
+  .topbar-profile-cluster {
+    max-width: min(12rem, 48vw);
+    min-height: 2.85rem !important;
+  }
+
+  .topbar-profile-cluster .topbar-profile {
+    min-height: 2.8rem !important;
+    padding: 0.28rem 0.65rem 0.28rem 0.32rem !important;
+  }
+
+  .topbar-profile-cluster .account-avatar {
+    height: 2.25rem !important;
+    width: 2.25rem !important;
+  }
+
+  .topbar-profile-cluster .account-button__copy {
+    display: inline-grid !important;
+  }
+
+  .topbar-profile-cluster .account-button__copy strong {
+    font-size: 0.9rem !important;
+    max-width: 5.8rem;
+  }
+
+  .topbar-profile-cluster .account-button__copy em {
+    display: none !important;
+  }
+
+  .topbar-logout {
+    min-width: 2.75rem !important;
+  }
+
+  .topbar__quick-actions > .account-button--login {
+    min-height: 2.85rem !important;
+    padding: 0.32rem 0.72rem 0.32rem 0.32rem !important;
+  }
+
+  .topbar__quick-actions > .account-button--login .account-button__icon {
+    height: 2.15rem !important;
+    width: 2.15rem !important;
+  }
+
+  .topbar__quick-actions > .account-button--login .account-button__copy em {
+    display: none;
+  }
+
+  .saved-room--structured {
+    grid-template-columns: 1fr !important;
+  }
+
+  .saved-room__title-row {
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .saved-room__actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .saved-room__actions .favorite-button,
+  .saved-room__actions .button {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar .brand__copy {
+    max-width: 7.4rem;
+  }
+
+  .topbar__quick-actions {
+    gap: 0.35rem !important;
+  }
+
+  .topbar-profile-cluster .account-button__copy strong {
+    max-width: 4.6rem;
+  }
+}
