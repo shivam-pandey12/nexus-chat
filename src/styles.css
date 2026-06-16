@@ -14606,3 +14606,236 @@ button.theme-toggle {
     flex-direction: column;
   }
 }
+
+/* Final mobile header correction: compact app-like topbar and visible side trigger. */
+@media (max-width: 760px) {
+  .topbar {
+    align-items: center !important;
+    display: grid !important;
+    gap: 0.68rem !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "brand actions"
+      "nav nav" !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding:
+      max(0.68rem, env(safe-area-inset-top))
+      max(0.75rem, env(safe-area-inset-right))
+      0.75rem
+      max(0.75rem, env(safe-area-inset-left)) !important;
+    width: 100% !important;
+  }
+
+  .topbar .brand {
+    align-items: center !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    display: inline-flex !important;
+    gap: 0.72rem !important;
+    grid-area: brand;
+    justify-self: start !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+  }
+
+  .topbar .brand__mark,
+  .topbar .brand__mark.brand__mark--image {
+    height: 2.85rem !important;
+    min-width: 2.85rem !important;
+    width: 2.85rem !important;
+  }
+
+  .topbar .brand__copy {
+    display: block !important;
+    min-width: 0 !important;
+  }
+
+  .topbar .brand__copy strong {
+    display: block !important;
+    font-size: clamp(1.02rem, 4.5vw, 1.35rem) !important;
+    line-height: 1.05 !important;
+    max-width: 10.8rem !important;
+  }
+
+  .topbar .brand__copy em {
+    display: none !important;
+  }
+
+  .topbar__quick-actions {
+    align-items: center !important;
+    display: flex !important;
+    gap: 0.45rem !important;
+    grid-area: actions;
+    justify-content: flex-end !important;
+    justify-self: end !important;
+    margin-left: 0 !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .notification-bell,
+  .notification-trigger,
+  .topbar .theme-toggle.icon-button,
+  .theme-toggle.icon-button,
+  button.theme-toggle {
+    height: 2.85rem !important;
+    min-height: 2.85rem !important;
+    min-width: 2.85rem !important;
+    width: 2.85rem !important;
+  }
+
+  .topbar .theme-toggle .ui-icon,
+  .topbar .theme-toggle svg,
+  .theme-toggle .ui-icon,
+  .theme-toggle svg,
+  .notification-bell .ui-icon,
+  .notification-bell svg {
+    height: 1.12rem !important;
+    width: 1.12rem !important;
+  }
+
+  .topbar-profile-cluster {
+    min-height: 2.85rem !important;
+    max-width: min(10.6rem, 40vw) !important;
+  }
+
+  .topbar-profile-cluster .topbar-profile {
+    gap: 0.52rem !important;
+    min-height: 2.78rem !important;
+    padding: 0.25rem 0.62rem 0.25rem 0.28rem !important;
+  }
+
+  .topbar-profile-cluster .account-avatar,
+  .topbar-profile-cluster .avatar,
+  .topbar-profile-cluster .profile-avatar {
+    height: 2.24rem !important;
+    width: 2.24rem !important;
+  }
+
+  .topbar-profile-cluster .account-button__copy {
+    display: inline-grid !important;
+    min-width: 0 !important;
+  }
+
+  .topbar-profile-cluster .account-button__copy strong {
+    font-size: 0.9rem !important;
+    line-height: 1 !important;
+    max-width: 4.9rem !important;
+  }
+
+  .topbar-logout {
+    min-height: 2.78rem !important;
+    min-width: 2.85rem !important;
+    width: 2.85rem !important;
+  }
+
+  .topbar__quick-actions > .account-button.account-button--login,
+  .topbar__quick-actions > .account-button--login {
+    min-height: 2.85rem !important;
+    padding: 0 0.1rem !important;
+  }
+
+  .topbar__quick-actions > .account-button.account-button--login .account-button__copy strong,
+  .topbar__quick-actions > .account-button--login .account-button__copy strong {
+    font-size: 0.92rem !important;
+    max-width: 4.8rem !important;
+    white-space: nowrap !important;
+  }
+
+  .topbar-dropdowns,
+  .topbar-nav-groups {
+    display: flex !important;
+    gap: 0.48rem !important;
+    grid-area: nav;
+    justify-content: flex-start !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    padding: 0.08rem 0 0.1rem !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .topbar-dropdowns::-webkit-scrollbar,
+  .topbar-nav-groups::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topbar-dropdown {
+    flex: 0 0 auto !important;
+    position: static !important;
+  }
+
+  .topbar-dropdown__trigger {
+    gap: 0.48rem !important;
+    min-height: 2.55rem !important;
+    padding: 0.42rem 0.7rem !important;
+  }
+
+  .topbar-dropdown__trigger-icon {
+    height: 2rem !important;
+    width: 2rem !important;
+  }
+
+  .topbar-dropdown__trigger strong,
+  .topbar-nav-item strong {
+    font-size: 0.9rem !important;
+    line-height: 1 !important;
+  }
+
+  .topbar-dropdown__stage {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    top: calc(100% - 0.15rem) !important;
+    transform: none !important;
+    width: auto !important;
+  }
+
+  .topbar-dropdown__panel {
+    max-height: min(68dvh, 31rem) !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar .brand__copy strong {
+    max-width: 8.4rem !important;
+  }
+
+  .topbar-profile-cluster .account-button__copy {
+    display: none !important;
+  }
+
+  .topbar-profile-cluster {
+    max-width: max-content !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .topbar {
+    gap: 0.55rem !important;
+    padding-inline: 0.58rem !important;
+  }
+
+  .topbar .brand__copy strong {
+    max-width: 7rem !important;
+  }
+
+  .notification-bell,
+  .notification-trigger,
+  .topbar .theme-toggle.icon-button,
+  .theme-toggle.icon-button,
+  button.theme-toggle,
+  .topbar-logout {
+    height: 2.65rem !important;
+    min-height: 2.65rem !important;
+    min-width: 2.65rem !important;
+    width: 2.65rem !important;
+  }
+}
